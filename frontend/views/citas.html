@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Citas - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn</h2>
+      <div class="nav-links">
+        <a href="./pantalladeInicio.html">Inicio</a>
+        <a class="active" href="./citas.html">Citas</a>
+        <a href="./vehiculos.html">Vehículos</a>
+        <a href="./servicios.html">Servicios</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1>Reservar cita</h1>
+
+        <form id="citaForm">
+          <div class="form-group">
+            <label for="vehiculo">Vehículo</label>
+            <select id="vehiculo" required>
+              <option value="">Selecciona un vehículo</option>
+              <option>Mazda 3 - ABC123</option>
+              <option>Chevrolet Spark - XYZ789</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="servicio">Servicio</label>
+            <select id="servicio" required>
+              <option value="">Selecciona un servicio</option>
+              <option>Cambio de aceite</option>
+              <option>Revisión general</option>
+              <option>Alineación y balanceo</option>
+              <option>Diagnóstico mecánico</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="fecha">Fecha y hora</label>
+            <input type="datetime-local" id="fecha" required />
+          </div>
+
+          <div class="form-group">
+            <label for="notas">Notas adicionales</label>
+            <textarea id="notas" rows="4" placeholder="Describe algo importante para el taller..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-submit">Reservar cita</button>
+        </form>
+
+        <div id="citaAlert" class="alert"></div>
+      </div>
+
+      <div class="card">
+        <h2>Mis citas</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Vehículo</th>
+                <th>Servicio</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2026-03-20 08:00</td>
+                <td>Mazda 3 - ABC123</td>
+                <td>Cambio de aceite</td>
+                <td><span class="badge badge-pendiente">Pendiente</span></td>
+              </tr>
+              <tr>
+                <td>2026-03-15 10:00</td>
+                <td>Chevrolet Spark - XYZ789</td>
+                <td>Revisión general</td>
+                <td><span class="badge badge-confirmada">Confirmada</span></td>
+              </tr>
+              <tr>
+                <td>2026-03-10 14:30</td>
+                <td>Mazda 3 - ABC123</td>
+                <td>Diagnóstico mecánico</td>
+                <td><span class="badge badge-completada">Completada</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+  </div>
+</body>
+</html>

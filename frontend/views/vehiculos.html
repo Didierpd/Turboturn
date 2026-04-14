@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehículos - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn</h2>
+      <div class="nav-links">
+        <a href="./pantalladeInicio.html">Inicio</a>
+        <a href="./citas.html">Citas</a>
+        <a class="active" href="./vehiculos.html">Vehículos</a>
+        <a href="./servicios.html">Servicios</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1>Registrar vehículo</h1>
+
+        <form id="vehiculoForm">
+          <div class="form-group">
+            <label for="marca">Marca</label>
+            <input type="text" id="marca" placeholder="Ej: Mazda" required />
+          </div>
+
+          <div class="form-group">
+            <label for="modelo">Modelo</label>
+            <input type="text" id="modelo" placeholder="Ej: 3 Touring" required />
+          </div>
+
+          <div class="form-group">
+            <label for="anio">Año</label>
+            <input type="number" id="anio" placeholder="Ej: 2020" required />
+          </div>
+
+          <div class="form-group">
+            <label for="placa">Placa</label>
+            <input type="text" id="placa" placeholder="Ej: ABC123" required />
+          </div>
+
+          <div class="form-group">
+            <label for="color">Color</label>
+            <input type="text" id="color" placeholder="Ej: Rojo" />
+          </div>
+
+          <button type="submit" class="btn-submit">Guardar vehículo</button>
+        </form>
+
+        <div id="vehiculoAlert" class="alert"></div>
+      </div>
+
+      <div class="card">
+        <h2>Vehículos registrados</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Año</th>
+                <th>Placa</th>
+                <th>Color</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mazda</td>
+                <td>3 Touring</td>
+                <td>2020</td>
+                <td>ABC123</td>
+                <td>Rojo</td>
+              </tr>
+              <tr>
+                <td>Chevrolet</td>
+                <td>Spark GT</td>
+                <td>2018</td>
+                <td>XYZ789</td>
+                <td>Blanco</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+  </div>
+</body>
+</html>
