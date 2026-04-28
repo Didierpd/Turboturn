@@ -1,0 +1,9 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/routes/__pycache__/
+*.pyc
+*.pyo
+
+# Node (por si acaso)
+node_modules/
