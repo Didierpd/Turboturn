@@ -10,8 +10,31 @@ router = APIRouter()
 class CitaData(BaseModel):
     usuario_id: int
     vehiculo_id: int
+    taller_id: int
     fecha_hora: str
     notas: Optional[str] = None
+
+
+@router.get("/talleres-activos", summary="Listar talleres activos")
+def get_talleres_activos():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT t.id, t.nombre, t.direccion, t.telefono
+            FROM talleres t
+            JOIN usuarios u ON t.admin_id = u.id
+            WHERE u.estado = 'activo'
+            ORDER BY t.nombre
+            """
+        )
+        return [dict(row) for row in cur.fetchall()]
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener talleres")
+    finally:
+        cur.close()
+        conn.close()
 
 
 @router.get("/taller/{usuario_id}", summary="Obtener citas del taller por usuario taller")
@@ -95,8 +118,8 @@ def create_cita(data: CitaData):
     try:
         cur.execute(
             """INSERT INTO citas (usuario_id, vehiculo_id, taller_id, fecha_hora, notas)
-               VALUES (%s, %s, 1, %s, %s) RETURNING *""",
-            (data.usuario_id, data.vehiculo_id, data.fecha_hora, data.notas),
+               VALUES (%s, %s, %s, %s, %s) RETURNING *""",
+            (data.usuario_id, data.vehiculo_id, data.taller_id, data.fecha_hora, data.notas),
         )
         conn.commit()
         return dict(cur.fetchone())

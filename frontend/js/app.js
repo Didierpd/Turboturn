@@ -44,6 +44,23 @@ function activarFormularioLogin() {
   });
 }
 
+async function cargarTalleresEnSelect() {
+  const select = document.getElementById("taller");
+  if (!select) return;
+  try {
+    const res = await fetch("http://localhost:8000/api/citas/talleres-activos");
+    const talleres = await res.json();
+    if (talleres.length === 0) {
+      select.innerHTML = `<option value="">No hay talleres disponibles</option>`;
+      return;
+    }
+    select.innerHTML = `<option value="">Selecciona un taller</option>` +
+      talleres.map(t => `<option value="${t.id}">${t.nombre} — ${t.direccion}</option>`).join("");
+  } catch (err) {
+    select.innerHTML = `<option value="">Error al cargar talleres</option>`;
+  }
+}
+
 async function cargarVehiculosEnSelect() {
   const select = document.getElementById("vehiculo");
   if (!select) return;
@@ -69,6 +86,7 @@ function activarFormularioCitas() {
   const form = document.getElementById("citaForm");
   if (!form) return;
 
+  cargarTalleresEnSelect();
   cargarVehiculosEnSelect();
 
   form.addEventListener("submit", async function (e) {
@@ -79,11 +97,16 @@ function activarFormularioCitas() {
 
     const datos = {
       usuario_id: usuario.id,
+      taller_id: parseInt(document.getElementById("taller").value),
       vehiculo_id: parseInt(document.getElementById("vehiculo").value),
       fecha_hora: document.getElementById("fecha").value,
       notas: document.getElementById("notas").value,
     };
 
+    if (!datos.taller_id) {
+      mostrarMensaje("citaAlert", "Selecciona un taller.", "error");
+      return;
+    }
     if (!datos.vehiculo_id) {
       mostrarMensaje("citaAlert", "Selecciona un vehículo.", "error");
       return;

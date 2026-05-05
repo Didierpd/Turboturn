@@ -62,7 +62,7 @@ def talleres_pendientes():
         cur.execute(
             "SELECT id, nombre, email, telefono, creado_en FROM usuarios WHERE rol='taller' AND estado='pendiente' ORDER BY creado_en DESC"
         )
-        return cur.fetchall()
+        return [dict(row) for row in cur.fetchall()]
     finally:
         cur.close()
         conn.close()
@@ -76,7 +76,7 @@ def todos_usuarios():
         cur.execute(
             "SELECT id, nombre, email, rol, estado, telefono, creado_en FROM usuarios ORDER BY creado_en DESC"
         )
-        return cur.fetchall()
+        return [dict(row) for row in cur.fetchall()]
     finally:
         cur.close()
         conn.close()
