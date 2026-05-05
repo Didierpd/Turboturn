@@ -85,14 +85,23 @@ def todos_usuarios():
 @router.put("/{usuario_id}/aprobar", summary="Aprobar taller")
 def aprobar_taller(usuario_id: int):
     conn = get_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cur.execute(
-            "UPDATE usuarios SET estado='activo' WHERE id=%s AND rol='taller' RETURNING id",
+            "UPDATE usuarios SET estado='activo' WHERE id=%s AND rol='taller' RETURNING id, nombre, telefono",
             (usuario_id,),
         )
-        if not cur.fetchone():
+        taller_usuario = cur.fetchone()
+        if not taller_usuario:
             raise HTTPException(status_code=404, detail="Taller no encontrado")
+
+        cur.execute("SELECT id FROM talleres WHERE admin_id=%s", (usuario_id,))
+        if not cur.fetchone():
+            cur.execute(
+                "INSERT INTO talleres (nombre, direccion, telefono, admin_id) VALUES (%s, %s, %s, %s)",
+                (taller_usuario["nombre"], "Por definir", taller_usuario["telefono"], usuario_id),
+            )
+
         conn.commit()
         return {"mensaje": "Taller aprobado"}
     except HTTPException:

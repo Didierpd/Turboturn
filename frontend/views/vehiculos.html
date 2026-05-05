@@ -15,6 +15,8 @@
         <a href="./citas.html">Citas</a>
         <a class="active" href="./vehiculos.html">Vehículos</a>
         <a href="./servicios.html">Servicios</a>
+        <a href="./historial.html">Historial</a>
+        <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
 
@@ -79,6 +81,15 @@
     </div>
 
     <script src="../js/app.js"></script>
+    <script>
+      const usuario = JSON.parse(localStorage.getItem("usuario"));
+      if (!usuario) { window.location.href = "./login.html"; }
+      document.getElementById("btnSalir").addEventListener("click", function(e) {
+        e.preventDefault();
+        localStorage.removeItem("usuario");
+        window.location.href = "./login.html";
+      });
+    </script>
   </div>
 </body>
 </html>
