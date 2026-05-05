@@ -54,6 +54,80 @@ def registro(data: RegistroData):
         conn.close()
 
 
+@router.get("/talleres-pendientes", summary="Talleres pendientes de aprobación")
+def talleres_pendientes():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            "SELECT id, nombre, email, telefono, creado_en FROM usuarios WHERE rol='taller' AND estado='pendiente' ORDER BY creado_en DESC"
+        )
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/todos", summary="Todos los usuarios")
+def todos_usuarios():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            "SELECT id, nombre, email, rol, estado, telefono, creado_en FROM usuarios ORDER BY creado_en DESC"
+        )
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{usuario_id}/aprobar", summary="Aprobar taller")
+def aprobar_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE usuarios SET estado='activo' WHERE id=%s AND rol='taller' RETURNING id",
+            (usuario_id,),
+        )
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Taller no encontrado")
+        conn.commit()
+        return {"mensaje": "Taller aprobado"}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error del servidor")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{usuario_id}/rechazar", summary="Rechazar taller")
+def rechazar_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE usuarios SET estado='rechazado' WHERE id=%s AND rol='taller' RETURNING id",
+            (usuario_id,),
+        )
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Taller no encontrado")
+        conn.commit()
+        return {"mensaje": "Taller rechazado"}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error del servidor")
+    finally:
+        cur.close()
+        conn.close()
+
+
 @router.post("/login", summary="Iniciar sesión")
 def login(data: LoginData):
     conn = get_connection()

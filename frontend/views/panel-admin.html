@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Admin - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn — Admin</h2>
+      <div class="nav-links">
+        <a class="active" href="./panel-admin.html">Dashboard</a>
+        <a href="#seccionPendientes">Talleres pendientes</a>
+        <a href="#seccionUsuarios">Usuarios</a>
+        <a href="#" id="btnSalir">Salir</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1 id="bienvenida">Panel de Administración</h1>
+        <p style="color:#64748b;">Aprueba talleres, gestiona usuarios y supervisa la plataforma.</p>
+      </div>
+
+      <!-- Talleres pendientes -->
+      <div class="card" id="seccionPendientes">
+        <h2>Talleres pendientes de aprobación</h2>
+        <div class="table-wrapper" style="margin-top:15px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Teléfono</th>
+                <th>Fecha registro</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="talleresPendientesBody">
+              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pendientesAlert" class="alert"></div>
+      </div>
+
+      <!-- Todos los usuarios -->
+      <div class="card" id="seccionUsuarios">
+        <h2>Gestión de usuarios</h2>
+        <div class="table-wrapper" style="margin-top:15px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Teléfono</th>
+              </tr>
+            </thead>
+            <tbody id="usuariosBody">
+              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script src="../js/admin.js"></script>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario || usuario.rol !== "admin") { window.location.href = "./login.html"; }
+    document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+    document.getElementById("btnSalir").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("usuario");
+      window.location.href = "./login.html";
+    });
+    cargarTalleresPendientes();
+    cargarTodosUsuarios();
+  </script>
+</body>
+</html>

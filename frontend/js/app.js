@@ -55,6 +55,43 @@ function activarFormularioCitas() {
   });
 }
 
+async function cargarCitasUsuario() {
+  const tbody = document.getElementById("citasBody");
+  if (!tbody) return;
+
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  if (!usuario) return;
+
+  try {
+    const res = await fetch(`http://localhost:8000/api/citas/${usuario.id}`);
+    const citas = await res.json();
+
+    if (citas.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;">No tienes citas registradas</td></tr>`;
+      return;
+    }
+
+    const badgeClass = {
+      pendiente: "badge-pendiente",
+      confirmada: "badge-confirmada",
+      completada: "badge-completada",
+      cancelada: "badge-pendiente"
+    };
+
+    tbody.innerHTML = citas.map(c => `
+      <tr>
+        <td>${new Date(c.fecha_hora).toLocaleString("es-CO")}</td>
+        <td>${c.marca} (${c.placa})</td>
+        <td>Taller TurboTurn</td>
+        <td><span class="badge ${badgeClass[c.estado] || ''}">${c.estado}</span></td>
+        <td>${c.notas || "-"}</td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5">Error al cargar citas</td></tr>`;
+  }
+}
+
 async function cargarVehiculos() {
   const usuario = JSON.parse(localStorage.getItem("usuario"));
   if (!usuario) return;
@@ -174,6 +211,7 @@ function activarFormularioRegistro() {
 document.addEventListener("DOMContentLoaded", function () {
   activarFormularioLogin();
   activarFormularioRegistro();
+  cargarCitasUsuario();
   activarFormularioCitas();
   activarFormularioVehiculos();
   cargarVehiculos();
