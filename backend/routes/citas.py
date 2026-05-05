@@ -37,6 +37,32 @@ def get_talleres_activos():
         conn.close()
 
 
+@router.get("/taller/{usuario_id}/clientes", summary="Clientes del taller")
+def get_clientes_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT DISTINCT u.id, u.nombre, u.email, u.telefono,
+                   v.marca, v.placa, v.tipo_vehiculo, v.anio
+            FROM citas c
+            JOIN usuarios u ON c.usuario_id = u.id
+            JOIN vehiculos v ON c.vehiculo_id = v.id
+            JOIN talleres t ON c.taller_id = t.id
+            WHERE t.admin_id = %s
+            ORDER BY u.nombre
+            """,
+            (usuario_id,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener clientes")
+    finally:
+        cur.close()
+        conn.close()
+
+
 @router.get("/taller/{usuario_id}", summary="Obtener citas del taller por usuario taller")
 def get_citas_taller(usuario_id: int):
     conn = get_connection()

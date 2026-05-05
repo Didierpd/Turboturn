@@ -11,18 +11,22 @@
     <div class="navbar">
       <h2>TurboTurn — Taller</h2>
       <div class="nav-links">
-        <a class="active" href="./panel-taller.html">Agenda</a>
+        <a href="#" class="tab-btn active" data-tab="agenda">Agenda</a>
+        <a href="#" class="tab-btn" data-tab="citas">Todas las citas</a>
+        <a href="#" class="tab-btn" data-tab="clientes">Clientes</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
 
     <div class="container">
+
+      <!-- Resumen siempre visible -->
       <div class="card">
         <h1 id="bienvenida">Panel del Taller</h1>
         <p style="color:#64748b;">Gestiona tu agenda, citas y clientes.</p>
       </div>
 
-      <div class="grid">
+      <div class="grid" style="margin-bottom:20px;">
         <div class="info-box">
           <h3>Citas de hoy</h3>
           <p id="citasHoy" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
@@ -37,43 +41,114 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:20px;">
-        <h2>Agenda — citas asignadas</h2>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha / Hora</th>
-                <th>Cliente</th>
-                <th>Vehículo</th>
-                <th>Notas</th>
-                <th>Estado</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="agendaBody">
-              <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
-            </tbody>
-          </table>
+      <!-- Tab Agenda (solo citas de hoy) -->
+      <div id="tab-agenda" class="tab-section">
+        <div class="card">
+          <h2>Agenda de hoy</h2>
+          <div class="table-wrapper" style="margin-top:15px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Cliente</th>
+                  <th>Vehículo</th>
+                  <th>Notas</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="agendaHoyBody">
+                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+
+      <!-- Tab Todas las citas -->
+      <div id="tab-citas" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Todas las citas</h2>
+          <div class="table-wrapper" style="margin-top:15px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha / Hora</th>
+                  <th>Cliente</th>
+                  <th>Vehículo</th>
+                  <th>Notas</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="todasCitasBody">
+                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Clientes -->
+      <div id="tab-clientes" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Clientes del taller</h2>
+          <div class="table-wrapper" style="margin-top:15px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Correo</th>
+                  <th>Teléfono</th>
+                  <th>Vehículo</th>
+                  <th>Placa</th>
+                </tr>
+              </thead>
+              <tbody id="clientesBody">
+                <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js"></script>
-  <script src="../js/taller.js"></script>
+  <script src="../js/app.js?v=3"></script>
+  <script src="../js/taller.js?v=2"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "taller") { window.location.href = "./login.html"; }
     document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+
     document.getElementById("btnSalir").addEventListener("click", function(e) {
       e.preventDefault();
       localStorage.removeItem("usuario");
       window.location.href = "./login.html";
     });
-    cargarAgendaTaller();
+
+    function mostrarTab(tab) {
+      document.querySelectorAll(".tab-section").forEach(s => s.style.display = "none");
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("tab-" + tab).style.display = "block";
+      document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add("active");
+
+      if (tab === "agenda") cargarAgendaHoy();
+      if (tab === "citas") cargarTodasCitas();
+      if (tab === "clientes") cargarClientes();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
+        mostrarTab(this.dataset.tab);
+      });
+    });
+
+    cargarAgendaHoy();
   </script>
 </body>
 </html>
