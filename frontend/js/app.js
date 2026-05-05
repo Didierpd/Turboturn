@@ -242,12 +242,15 @@ function activarFormularioRegistro() {
   const rolSelect = document.getElementById("rol");
   const camposTaller = document.getElementById("camposTaller");
 
-  rolSelect.addEventListener("change", function () {
-    const esTaller = this.value === "taller";
+  function toggleCamposTaller() {
+    const esTaller = rolSelect.value === "taller";
     camposTaller.style.display = esTaller ? "block" : "none";
     document.getElementById("nombre_taller").required = esTaller;
     document.getElementById("direccion_taller").required = esTaller;
-  });
+  }
+
+  rolSelect.addEventListener("change", toggleCamposTaller);
+  toggleCamposTaller();
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
