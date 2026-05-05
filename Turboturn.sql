@@ -10,7 +10,8 @@ CREATE TABLE usuarios (
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     contrasena VARCHAR(255) NOT NULL,
-    rol VARCHAR(20) NOT NULL CHECK (rol IN ('cliente', 'mecanico', 'admin')),
+    rol VARCHAR(20) NOT NULL CHECK (rol IN ('usuario', 'taller', 'admin')),
+    estado VARCHAR(20) DEFAULT 'activo' CHECK (estado IN ('activo', 'pendiente', 'rechazado')),
     telefono VARCHAR(20),
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -73,11 +74,11 @@ CREATE TABLE historial_servicios (
 -- =============================================
 
 -- Usuarios
-INSERT INTO usuarios (nombre, email, contrasena, rol, telefono) VALUES
-('Carlos Ramírez', 'carlos@gmail.com', '1234', 'cliente', '3001234567'),
-('María López', 'maria@gmail.com', '1234', 'cliente', '3109876543'),
-('Pedro Gómez', 'pedro@gmail.com', '1234', 'admin', '3205556677'),
-('Ana Martínez', 'ana@gmail.com', '1234', 'cliente', '3001112233');
+INSERT INTO usuarios (nombre, email, contrasena, rol, estado, telefono) VALUES
+('Carlos Ramírez', 'carlos@gmail.com', '1234', 'usuario', 'activo', '3001234567'),
+('María López', 'maria@gmail.com', '1234', 'usuario', 'activo', '3109876543'),
+('Pedro Gómez', 'pedro@gmail.com', '1234', 'admin', 'activo', '3205556677'),
+('Ana Martínez', 'ana@gmail.com', '1234', 'usuario', 'activo', '3001112233');
 
 -- Taller
 INSERT INTO talleres (nombre, direccion, telefono, admin_id) VALUES
