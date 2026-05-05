@@ -17,6 +17,8 @@ class RegistroData(BaseModel):
     contrasena: str
     rol: str
     telefono: str = None
+    nombre_taller: str = None
+    direccion_taller: str = None
 
 
 @router.post("/registro", summary="Registrar usuario o taller")
@@ -24,15 +26,16 @@ def registro(data: RegistroData):
     if data.rol not in ("usuario", "taller"):
         raise HTTPException(status_code=400, detail="Rol no válido")
 
+    if data.rol == "taller":
+        if not data.nombre_taller or not data.direccion_taller:
+            raise HTTPException(status_code=400, detail="El taller debe tener nombre y dirección")
+
     estado = "pendiente" if data.rol == "taller" else "activo"
 
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        cur.execute(
-            "SELECT id FROM usuarios WHERE email=%s",
-            (data.email,),
-        )
+        cur.execute("SELECT id FROM usuarios WHERE email=%s", (data.email,))
         if cur.fetchone():
             raise HTTPException(status_code=409, detail="El correo ya está registrado")
 
@@ -42,6 +45,13 @@ def registro(data: RegistroData):
             (data.nombre, data.email, data.contrasena, data.rol, estado, data.telefono),
         )
         nuevo = cur.fetchone()
+
+        if data.rol == "taller":
+            cur.execute(
+                "INSERT INTO talleres (nombre, direccion, telefono, admin_id) VALUES (%s, %s, %s, %s)",
+                (data.nombre_taller, data.direccion_taller, data.telefono, nuevo["id"]),
+            )
+
         conn.commit()
         return dict(nuevo)
     except HTTPException:
@@ -85,23 +95,14 @@ def todos_usuarios():
 @router.put("/{usuario_id}/aprobar", summary="Aprobar taller")
 def aprobar_taller(usuario_id: int):
     conn = get_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur = conn.cursor()
     try:
         cur.execute(
-            "UPDATE usuarios SET estado='activo' WHERE id=%s AND rol='taller' RETURNING id, nombre, telefono",
+            "UPDATE usuarios SET estado='activo' WHERE id=%s AND rol='taller' RETURNING id",
             (usuario_id,),
         )
-        taller_usuario = cur.fetchone()
-        if not taller_usuario:
-            raise HTTPException(status_code=404, detail="Taller no encontrado")
-
-        cur.execute("SELECT id FROM talleres WHERE admin_id=%s", (usuario_id,))
         if not cur.fetchone():
-            cur.execute(
-                "INSERT INTO talleres (nombre, direccion, telefono, admin_id) VALUES (%s, %s, %s, %s)",
-                (taller_usuario["nombre"], "Por definir", taller_usuario["telefono"], usuario_id),
-            )
-
+            raise HTTPException(status_code=404, detail="Taller no encontrado")
         conn.commit()
         return {"mensaje": "Taller aprobado"}
     except HTTPException:
