@@ -78,7 +78,8 @@ INSERT INTO usuarios (nombre, email, contrasena, rol, estado, telefono) VALUES
 ('Carlos Ramírez', 'carlos@gmail.com', '1234', 'usuario', 'activo', '3001234567'),
 ('María López', 'maria@gmail.com', '1234', 'usuario', 'activo', '3109876543'),
 ('Pedro Gómez', 'pedro@gmail.com', '1234', 'admin', 'activo', '3205556677'),
-('Ana Martínez', 'ana@gmail.com', '1234', 'usuario', 'activo', '3001112233');
+('Ana Martínez', 'ana@gmail.com', '1234', 'usuario', 'activo', '3001112233'),
+('Taller Central', 'taller@gmail.com', '1234', 'taller', 'activo', '3001234568');
 
 -- Taller
 INSERT INTO talleres (nombre, direccion, telefono, admin_id) VALUES
