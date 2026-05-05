@@ -11,79 +11,114 @@
     <div class="navbar">
       <h2>TurboTurn — Admin</h2>
       <div class="nav-links">
-        <a class="active" href="./panel-admin.html">Dashboard</a>
-        <a href="#seccionPendientes">Talleres pendientes</a>
-        <a href="#seccionUsuarios">Usuarios</a>
+        <a href="#" class="tab-btn active" data-tab="dashboard">Dashboard</a>
+        <a href="#" class="tab-btn" data-tab="pendientes">Talleres pendientes</a>
+        <a href="#" class="tab-btn" data-tab="usuarios">Usuarios</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
 
     <div class="container">
-      <div class="card">
-        <h1 id="bienvenida">Panel de Administración</h1>
-        <p style="color:#64748b;">Aprueba talleres, gestiona usuarios y supervisa la plataforma.</p>
+
+      <!-- Dashboard -->
+      <div id="tab-dashboard" class="tab-section">
+        <div class="card">
+          <h1 id="bienvenida">Panel de Administración</h1>
+          <p style="color:#64748b;">Selecciona una sección del menú superior para gestionar la plataforma.</p>
+        </div>
+        <div class="grid">
+          <div class="info-box" style="cursor:pointer;" onclick="mostrarTab('pendientes')">
+            <h3>Talleres pendientes</h3>
+            <p>Aprueba o rechaza solicitudes de nuevos talleres.</p>
+          </div>
+          <div class="info-box" style="cursor:pointer;" onclick="mostrarTab('usuarios')">
+            <h3>Gestión de usuarios</h3>
+            <p>Consulta todos los usuarios registrados en la plataforma.</p>
+          </div>
+        </div>
       </div>
 
       <!-- Talleres pendientes -->
-      <div class="card" id="seccionPendientes">
-        <h2>Talleres pendientes de aprobación</h2>
-        <div class="table-wrapper" style="margin-top:15px;">
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Teléfono</th>
-                <th>Fecha registro</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="talleresPendientesBody">
-              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
-            </tbody>
-          </table>
+      <div id="tab-pendientes" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Talleres pendientes de aprobación</h2>
+          <div class="table-wrapper" style="margin-top:15px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Teléfono</th>
+                  <th>Fecha registro</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="talleresPendientesBody">
+                <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="pendientesAlert" class="alert"></div>
         </div>
-        <div id="pendientesAlert" class="alert"></div>
       </div>
 
-      <!-- Todos los usuarios -->
-      <div class="card" id="seccionUsuarios">
-        <h2>Gestión de usuarios</h2>
-        <div class="table-wrapper" style="margin-top:15px;">
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Teléfono</th>
-              </tr>
-            </thead>
-            <tbody id="usuariosBody">
-              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
-            </tbody>
-          </table>
+      <!-- Usuarios -->
+      <div id="tab-usuarios" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Gestión de usuarios</h2>
+          <div class="table-wrapper" style="margin-top:15px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Teléfono</th>
+                </tr>
+              </thead>
+              <tbody id="usuariosBody">
+                <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+
     </div>
 
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js"></script>
-  <script src="../js/admin.js"></script>
+  <script src="../js/app.js?v=3"></script>
+  <script src="../js/admin.js?v=2"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "admin") { window.location.href = "./login.html"; }
     document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+
     document.getElementById("btnSalir").addEventListener("click", function(e) {
       e.preventDefault();
       localStorage.removeItem("usuario");
       window.location.href = "./login.html";
     });
-    cargarTalleresPendientes();
-    cargarTodosUsuarios();
+
+    function mostrarTab(tab) {
+      document.querySelectorAll(".tab-section").forEach(s => s.style.display = "none");
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("tab-" + tab).style.display = "block";
+      document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add("active");
+
+      if (tab === "pendientes") cargarTalleresPendientes();
+      if (tab === "usuarios") cargarTodosUsuarios();
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
+        mostrarTab(this.dataset.tab);
+      });
+    });
   </script>
 </body>
 </html>
