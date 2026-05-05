@@ -240,22 +240,35 @@ function activarFormularioRegistro() {
   if (!form) return;
 
   const rolSelect = document.getElementById("rol");
-  const avisoTaller = document.getElementById("avisoTaller");
+  const camposTaller = document.getElementById("camposTaller");
 
   rolSelect.addEventListener("change", function () {
-    avisoTaller.style.display = this.value === "taller" ? "block" : "none";
+    const esTaller = this.value === "taller";
+    camposTaller.style.display = esTaller ? "block" : "none";
+    document.getElementById("nombre_taller").required = esTaller;
+    document.getElementById("direccion_taller").required = esTaller;
   });
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
+    const rol = document.getElementById("rol").value;
     const datos = {
       nombre: document.getElementById("nombre").value,
       email: document.getElementById("email").value,
       telefono: document.getElementById("telefono").value,
       contrasena: document.getElementById("contrasena").value,
-      rol: document.getElementById("rol").value,
+      rol,
     };
+
+    if (rol === "taller") {
+      datos.nombre_taller = document.getElementById("nombre_taller").value;
+      datos.direccion_taller = document.getElementById("direccion_taller").value;
+      if (!datos.nombre_taller || !datos.direccion_taller) {
+        mostrarMensaje("registroAlert", "Ingresa el nombre y la dirección del taller.", "error");
+        return;
+      }
+    }
 
     try {
       const res = await fetch("http://localhost:8000/api/usuarios/registro", {
@@ -271,15 +284,14 @@ function activarFormularioRegistro() {
         return;
       }
 
-      if (datos.rol === "taller") {
-        mostrarMensaje("registroAlert", "Registro exitoso. Tu cuenta está pendiente de aprobación.", "success");
+      if (rol === "taller") {
+        mostrarMensaje("registroAlert", "Registro exitoso. Tu cuenta está pendiente de aprobación por el administrador.", "success");
+        form.reset();
+        camposTaller.style.display = "none";
       } else {
         mostrarMensaje("registroAlert", "Registro exitoso. Redirigiendo...", "success");
         setTimeout(() => { window.location.href = "./login.html"; }, 2000);
       }
-
-      form.reset();
-      avisoTaller.style.display = "none";
     } catch (err) {
       mostrarMensaje("registroAlert", "No se pudo conectar con el servidor.", "error");
     }
