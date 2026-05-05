@@ -29,7 +29,8 @@ function activarFormularioLogin() {
       });
 
       if (!res.ok) {
-        mostrarMensaje("loginAlert", "Correo o contraseña incorrectos.", "error");
+        const err = await res.json();
+        mostrarMensaje("loginAlert", err.detail || "Correo o contraseña incorrectos.", "error");
         return;
       }
 
@@ -119,8 +120,60 @@ function activarFormularioVehiculos() {
   });
 }
 
+function activarFormularioRegistro() {
+  const form = document.getElementById("registroForm");
+  if (!form) return;
+
+  const rolSelect = document.getElementById("rol");
+  const avisoTaller = document.getElementById("avisoTaller");
+
+  rolSelect.addEventListener("change", function () {
+    avisoTaller.style.display = this.value === "taller" ? "block" : "none";
+  });
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const datos = {
+      nombre: document.getElementById("nombre").value,
+      email: document.getElementById("email").value,
+      telefono: document.getElementById("telefono").value,
+      contrasena: document.getElementById("contrasena").value,
+      rol: document.getElementById("rol").value,
+    };
+
+    try {
+      const res = await fetch("http://localhost:8000/api/usuarios/registro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        mostrarMensaje("registroAlert", data.detail || "Error al registrarse.", "error");
+        return;
+      }
+
+      if (datos.rol === "taller") {
+        mostrarMensaje("registroAlert", "Registro exitoso. Tu cuenta está pendiente de aprobación.", "success");
+      } else {
+        mostrarMensaje("registroAlert", "Registro exitoso. Redirigiendo...", "success");
+        setTimeout(() => { window.location.href = "./login.html"; }, 2000);
+      }
+
+      form.reset();
+      avisoTaller.style.display = "none";
+    } catch (err) {
+      mostrarMensaje("registroAlert", "No se pudo conectar con el servidor.", "error");
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   activarFormularioLogin();
+  activarFormularioRegistro();
   activarFormularioCitas();
   activarFormularioVehiculos();
   cargarVehiculos();
