@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Usuario - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn</h2>
+      <div class="nav-links">
+        <a class="active" href="./panel-usuario.html">Inicio</a>
+        <a href="./citas.html">Reservar cita</a>
+        <a href="./vehiculos.html">Mis vehículos</a>
+        <a href="./servicios.html">Servicios</a>
+        <a href="./historial.html">Historial</a>
+        <a href="#" id="btnSalir">Salir</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1 id="bienvenida">Bienvenido</h1>
+        <p style="color:#64748b;">Panel de usuario — gestiona tus citas y vehículos.</p>
+      </div>
+
+      <div class="grid">
+        <a href="./citas.html" style="text-decoration:none;">
+          <div class="info-box">
+            <h3>Reservar cita</h3>
+            <p>Agenda un servicio en el taller de forma rápida.</p>
+          </div>
+        </a>
+
+        <a href="./vehiculos.html" style="text-decoration:none;">
+          <div class="info-box">
+            <h3>Mis vehículos</h3>
+            <p>Registra y consulta tus vehículos.</p>
+          </div>
+        </a>
+
+        <a href="./servicios.html" style="text-decoration:none;">
+          <div class="info-box">
+            <h3>Servicios disponibles</h3>
+            <p>Consulta los servicios y precios del taller.</p>
+          </div>
+        </a>
+
+        <a href="./historial.html" style="text-decoration:none;">
+          <div class="info-box">
+            <h3>Historial</h3>
+            <p>Revisa el historial de mantenimientos de tus vehículos.</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <h2>Mis citas recientes</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Vehículo</th>
+                <th>Taller</th>
+                <th>Estado</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody id="citasBody">
+              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario) { window.location.href = "./login.html"; }
+    document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+    document.getElementById("btnSalir").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("usuario");
+      window.location.href = "./login.html";
+    });
+  </script>
+</body>
+</html>
