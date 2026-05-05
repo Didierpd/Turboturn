@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Historial - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn</h2>
+      <div class="nav-links">
+        <a href="./pantalladeInicio.html">Inicio</a>
+        <a href="./citas.html">Citas</a>
+        <a href="./vehiculos.html">Vehículos</a>
+        <a href="./servicios.html">Servicios</a>
+        <a class="active" href="./historial.html">Historial</a>
+        <a href="#" id="btnSalir">Salir</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1>Historial de servicios</h1>
+        <p style="color:#64748b;margin-bottom:20px;">Registro de todos los servicios realizados a tus vehículos.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Vehículo</th>
+                <th>Servicio</th>
+                <th>Observaciones</th>
+                <th>Costo</th>
+              </tr>
+            </thead>
+            <tbody id="historialBody">
+              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario) { window.location.href = "./login.html"; }
+    document.getElementById("btnSalir").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("usuario");
+      window.location.href = "./login.html";
+    });
+
+    async function cargarHistorial() {
+      const tbody = document.getElementById("historialBody");
+      try {
+        const res = await fetch(`http://localhost:8000/api/historial/${usuario.id}`);
+        const historial = await res.json();
+        if (historial.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;">No hay servicios registrados aún.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = historial.map(h => `
+          <tr>
+            <td>${new Date(h.fecha).toLocaleDateString("es-CO")}</td>
+            <td>${h.tipo_vehiculo} ${h.marca} (${h.placa})</td>
+            <td>${h.servicio}</td>
+            <td>${h.observaciones || "-"}</td>
+            <td>$${Number(h.costo_final).toLocaleString("es-CO")}</td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5">Error al cargar historial.</td></tr>`;
+      }
+    }
+    cargarHistorial();
+  </script>
+</body>
+</html>

@@ -14,8 +14,8 @@ class CitaData(BaseModel):
     notas: Optional[str] = None
 
 
-@router.get("/taller/{taller_id}", summary="Obtener citas del taller")
-def get_citas_taller(taller_id: int):
+@router.get("/taller/{usuario_id}", summary="Obtener citas del taller por usuario taller")
+def get_citas_taller(usuario_id: int):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
@@ -26,10 +26,11 @@ def get_citas_taller(taller_id: int):
             FROM citas c
             JOIN usuarios u ON c.usuario_id = u.id
             JOIN vehiculos v ON c.vehiculo_id = v.id
-            WHERE c.taller_id = %s
+            JOIN talleres t ON c.taller_id = t.id
+            WHERE t.admin_id = %s
             ORDER BY c.fecha_hora DESC
             """,
-            (taller_id,),
+            (usuario_id,),
         )
         return [dict(row) for row in cur.fetchall()]
     except Exception:

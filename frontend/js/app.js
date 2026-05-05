@@ -44,14 +44,69 @@ function activarFormularioLogin() {
   });
 }
 
+async function cargarVehiculosEnSelect() {
+  const select = document.getElementById("vehiculo");
+  if (!select) return;
+
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  if (!usuario) return;
+
+  try {
+    const res = await fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`);
+    const vehiculos = await res.json();
+    if (vehiculos.length === 0) {
+      select.innerHTML = `<option value="">No tienes vehículos registrados</option>`;
+      return;
+    }
+    select.innerHTML = `<option value="">Selecciona un vehículo</option>` +
+      vehiculos.map(v => `<option value="${v.id}">${v.tipo_vehiculo} ${v.marca} - ${v.placa}</option>`).join("");
+  } catch (err) {
+    select.innerHTML = `<option value="">Error al cargar vehículos</option>`;
+  }
+}
+
 function activarFormularioCitas() {
   const form = document.getElementById("citaForm");
   if (!form) return;
 
-  form.addEventListener("submit", function (e) {
+  cargarVehiculosEnSelect();
+
+  form.addEventListener("submit", async function (e) {
     e.preventDefault();
-    mostrarMensaje("citaAlert", "Cita reservada correctamente.");
-    form.reset();
+
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario) return;
+
+    const datos = {
+      usuario_id: usuario.id,
+      vehiculo_id: parseInt(document.getElementById("vehiculo").value),
+      fecha_hora: document.getElementById("fecha").value,
+      notas: document.getElementById("notas").value,
+    };
+
+    if (!datos.vehiculo_id) {
+      mostrarMensaje("citaAlert", "Selecciona un vehículo.", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8000/api/citas/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      });
+
+      if (!res.ok) {
+        mostrarMensaje("citaAlert", "Error al reservar la cita.", "error");
+        return;
+      }
+
+      mostrarMensaje("citaAlert", "Cita reservada correctamente.", "success");
+      form.reset();
+      cargarCitasUsuario();
+    } catch (err) {
+      mostrarMensaje("citaAlert", "No se pudo conectar con el servidor.", "error");
+    }
   });
 }
 
