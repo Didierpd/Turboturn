@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import psycopg2.extras
 from database import get_connection
-from email_utils import generar_token_verificacion, verificar_token, enviar_correo_verificacion
+from email_utils import generar_codigo, enviar_correo_verificacion
 
 router = APIRouter()
 
@@ -41,10 +40,12 @@ def registro(data: RegistroData):
         if cur.fetchone():
             raise HTTPException(status_code=409, detail="El correo ya está registrado")
 
+        codigo = generar_codigo()
+
         cur.execute(
-            """INSERT INTO usuarios (nombre, email, contrasena, rol, estado, telefono, email_verificado)
-               VALUES (%s, %s, %s, %s, %s, %s, FALSE) RETURNING id, nombre, email, rol, estado""",
-            (data.nombre, data.email, data.contrasena, data.rol, estado, data.telefono),
+            """INSERT INTO usuarios (nombre, email, contrasena, rol, estado, telefono, email_verificado, codigo_verificacion)
+               VALUES (%s, %s, %s, %s, %s, %s, FALSE, %s) RETURNING id, nombre, email, rol, estado""",
+            (data.nombre, data.email, data.contrasena, data.rol, estado, data.telefono, codigo),
         )
         nuevo = cur.fetchone()
 
@@ -56,9 +57,8 @@ def registro(data: RegistroData):
 
         conn.commit()
 
-        token = generar_token_verificacion(data.email)
         try:
-            enviar_correo_verificacion(data.email, data.nombre, token)
+            enviar_correo_verificacion(data.email, data.nombre, codigo)
         except Exception:
             pass
 
@@ -73,44 +73,40 @@ def registro(data: RegistroData):
         conn.close()
 
 
-@router.get("/verificar", summary="Verificar correo electrónico", response_class=HTMLResponse)
-def verificar_email(token: str):
-    try:
-        email = verificar_token(token)
-    except Exception:
-        return HTMLResponse("""
-        <html><body style="font-family:Arial;text-align:center;padding:60px;background:#f4f7fb;">
-          <div style="max-width:400px;margin:auto;background:white;padding:30px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.08);">
-            <h2 style="color:#dc2626;">Enlace inválido o expirado</h2>
-            <p style="color:#475569;">El enlace de verificación no es válido o ya expiró. Regístrate nuevamente.</p>
-            <a href="/views/registro.html" style="display:inline-block;margin-top:20px;padding:10px 20px;background:#1d4ed8;color:white;border-radius:8px;text-decoration:none;">Registrarse</a>
-          </div>
-        </body></html>
-        """, status_code=400)
+class VerificarCodigoData(BaseModel):
+    email: str
+    codigo: str
 
+
+@router.post("/verificar-codigo", summary="Verificar código de 6 dígitos")
+def verificar_codigo(data: VerificarCodigoData):
     conn = get_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cur.execute(
-            "UPDATE usuarios SET email_verificado=TRUE WHERE email=%s RETURNING id",
-            (email,)
+            "SELECT id, codigo_verificacion FROM usuarios WHERE email=%s",
+            (data.email,)
         )
-        if not cur.fetchone():
+        usuario = cur.fetchone()
+        if not usuario:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        if usuario["codigo_verificacion"] != data.codigo:
+            raise HTTPException(status_code=400, detail="Código incorrecto")
+
+        cur.execute(
+            "UPDATE usuarios SET email_verificado=TRUE, codigo_verificacion=NULL WHERE email=%s",
+            (data.email,)
+        )
         conn.commit()
+        return {"mensaje": "Correo verificado correctamente"}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error del servidor")
     finally:
         cur.close()
         conn.close()
-
-    return HTMLResponse("""
-    <html><body style="font-family:Arial;text-align:center;padding:60px;background:#f4f7fb;">
-      <div style="max-width:400px;margin:auto;background:white;padding:30px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.08);">
-        <h2 style="color:#16a34a;">¡Correo verificado!</h2>
-        <p style="color:#475569;">Tu cuenta ha sido activada correctamente.</p>
-        <a href="/views/login.html" style="display:inline-block;margin-top:20px;padding:10px 20px;background:#1d4ed8;color:white;border-radius:8px;text-decoration:none;">Iniciar sesión</a>
-      </div>
-    </body></html>
-    """)
 
 
 @router.get("/talleres-pendientes", summary="Talleres pendientes de aprobación")
