@@ -7,3 +7,7 @@ backend/routes/__pycache__/
 
 # Node (por si acaso)
 node_modules/
+
+# Variables de entorno
+backend/.env
+.env

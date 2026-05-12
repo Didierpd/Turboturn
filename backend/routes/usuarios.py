@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import psycopg2.extras
 from database import get_connection
+from email_utils import generar_token_verificacion, verificar_token, enviar_correo_verificacion
 
 router = APIRouter()
 
@@ -40,8 +42,8 @@ def registro(data: RegistroData):
             raise HTTPException(status_code=409, detail="El correo ya está registrado")
 
         cur.execute(
-            """INSERT INTO usuarios (nombre, email, contrasena, rol, estado, telefono)
-               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id, nombre, email, rol, estado""",
+            """INSERT INTO usuarios (nombre, email, contrasena, rol, estado, telefono, email_verificado)
+               VALUES (%s, %s, %s, %s, %s, %s, FALSE) RETURNING id, nombre, email, rol, estado""",
             (data.nombre, data.email, data.contrasena, data.rol, estado, data.telefono),
         )
         nuevo = cur.fetchone()
@@ -53,6 +55,13 @@ def registro(data: RegistroData):
             )
 
         conn.commit()
+
+        token = generar_token_verificacion(data.email)
+        try:
+            enviar_correo_verificacion(data.email, data.nombre, token)
+        except Exception:
+            pass
+
         return dict(nuevo)
     except HTTPException:
         raise
@@ -62,6 +71,46 @@ def registro(data: RegistroData):
     finally:
         cur.close()
         conn.close()
+
+
+@router.get("/verificar", summary="Verificar correo electrónico", response_class=HTMLResponse)
+def verificar_email(token: str):
+    try:
+        email = verificar_token(token)
+    except Exception:
+        return HTMLResponse("""
+        <html><body style="font-family:Arial;text-align:center;padding:60px;background:#f4f7fb;">
+          <div style="max-width:400px;margin:auto;background:white;padding:30px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+            <h2 style="color:#dc2626;">Enlace inválido o expirado</h2>
+            <p style="color:#475569;">El enlace de verificación no es válido o ya expiró. Regístrate nuevamente.</p>
+            <a href="/views/registro.html" style="display:inline-block;margin-top:20px;padding:10px 20px;background:#1d4ed8;color:white;border-radius:8px;text-decoration:none;">Registrarse</a>
+          </div>
+        </body></html>
+        """, status_code=400)
+
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE usuarios SET email_verificado=TRUE WHERE email=%s RETURNING id",
+            (email,)
+        )
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+    return HTMLResponse("""
+    <html><body style="font-family:Arial;text-align:center;padding:60px;background:#f4f7fb;">
+      <div style="max-width:400px;margin:auto;background:white;padding:30px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+        <h2 style="color:#16a34a;">¡Correo verificado!</h2>
+        <p style="color:#475569;">Tu cuenta ha sido activada correctamente.</p>
+        <a href="/views/login.html" style="display:inline-block;margin-top:20px;padding:10px 20px;background:#1d4ed8;color:white;border-radius:8px;text-decoration:none;">Iniciar sesión</a>
+      </div>
+    </body></html>
+    """)
 
 
 @router.get("/talleres-pendientes", summary="Talleres pendientes de aprobación")
@@ -150,6 +199,8 @@ def login(data: LoginData):
         usuario = cur.fetchone()
         if not usuario:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        if not usuario["email_verificado"]:
+            raise HTTPException(status_code=403, detail="Debes verificar tu correo antes de ingresar. Revisa tu bandeja de entrada.")
         if usuario["estado"] == "pendiente":
             raise HTTPException(status_code=403, detail="Tu cuenta está pendiente de aprobación por el administrador")
         if usuario["estado"] == "rechazado":
