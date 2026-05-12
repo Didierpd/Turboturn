@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verificar cuenta - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn</h2>
+      <div class="nav-links">
+        <a href="../index.html">Inicio</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card" style="max-width:450px;margin:60px auto;">
+        <h1>Verifica tu correo</h1>
+        <p style="color:#64748b;margin-bottom:24px;">
+          Te enviamos un código de 6 dígitos a tu correo. Ingrésalo aquí para activar tu cuenta.
+        </p>
+
+        <form id="verificarForm">
+          <div class="form-group">
+            <label for="codigo">Código de verificación</label>
+            <input type="text" id="codigo" maxlength="6" placeholder="123456"
+              style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+          </div>
+          <button type="submit" class="btn-submit" style="width:100%;">Verificar cuenta</button>
+        </form>
+
+        <div id="verificarAlert" class="alert"></div>
+
+        <p style="margin-top:20px;text-align:center;color:#64748b;">
+          ¿No recibiste el código? <a href="./registro.html" style="color:#1d4ed8;">Regístrate nuevamente</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+  </div>
+
+  <script src="../js/app.js?v=3"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get("email");
+    if (!email) window.location.href = "./registro.html";
+
+    document.getElementById("verificarForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigo").value.trim();
+
+      try {
+        const res = await fetch("http://localhost:8000/api/usuarios/verificar-codigo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, codigo })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          mostrarMensaje("verificarAlert", data.detail || "Código incorrecto.", "error");
+          return;
+        }
+
+        mostrarMensaje("verificarAlert", "¡Cuenta verificada! Redirigiendo...", "success");
+        setTimeout(() => { window.location.href = "./login.html"; }, 2000);
+      } catch (err) {
+        mostrarMensaje("verificarAlert", "No se pudo conectar con el servidor.", "error");
+      }
+    });
+  </script>
+</body>
+</html>

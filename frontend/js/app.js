@@ -287,14 +287,11 @@ function activarFormularioRegistro() {
         return;
       }
 
-      if (rol === "taller") {
-        mostrarMensaje("registroAlert", "Registro exitoso. Tu cuenta está pendiente de aprobación por el administrador.", "success");
-        form.reset();
-        camposTaller.style.display = "none";
-      } else {
-        mostrarMensaje("registroAlert", "Registro exitoso. Redirigiendo...", "success");
-        setTimeout(() => { window.location.href = "./login.html"; }, 2000);
-      }
+      mostrarMensaje("registroAlert", "Registro exitoso. Te enviamos un código a tu correo.", "success");
+      const emailVal = document.getElementById("email").value;
+      setTimeout(() => {
+        window.location.href = `./verificar.html?email=${encodeURIComponent(emailVal)}`;
+      }, 2000);
     } catch (err) {
       mostrarMensaje("registroAlert", "No se pudo conectar con el servidor.", "error");
     }
