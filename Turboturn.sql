@@ -12,6 +12,7 @@ CREATE TABLE usuarios (
     contrasena VARCHAR(255) NOT NULL,
     rol VARCHAR(20) NOT NULL CHECK (rol IN ('usuario', 'taller', 'admin')),
     estado VARCHAR(20) DEFAULT 'activo' CHECK (estado IN ('activo', 'pendiente', 'rechazado')),
+    email_verificado BOOLEAN DEFAULT FALSE,
     telefono VARCHAR(20),
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
