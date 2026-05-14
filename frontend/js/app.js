@@ -15,6 +15,7 @@ function activarFormularioLogin() {
   const form = document.getElementById("loginForm");
   if (!form) return;
 
+  // ── Fase 1: email + contraseña ──
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -34,14 +35,58 @@ function activarFormularioLogin() {
         return;
       }
 
-      const usuario = await res.json();
-      localStorage.setItem("usuario", JSON.stringify(usuario));
+      const data = await res.json();
+
+      // ── Si el usuario tiene MFA activo, mostrar pantalla de código ──
+      if (data.mfa_requerido) {
+        sessionStorage.setItem("mfa_usuario_id", data.usuario_id);
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("mfaSection").style.display = "block";
+        return;
+      }
+
+      // ── Sin MFA: login completo ──
+      localStorage.setItem("usuario", JSON.stringify(data.usuario));
       window.location.href = "./pantalladeInicio.html";
 
     } catch (err) {
       mostrarMensaje("loginAlert", "No se pudo conectar con el servidor.", "error");
     }
   });
+
+  // ── Fase 2: validar código MFA ──
+  const mfaForm = document.getElementById("mfaForm");
+  if (mfaForm) {
+    mfaForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const usuario_id = sessionStorage.getItem("mfa_usuario_id");
+      const codigo = document.getElementById("codigoMFA").value.trim();
+
+      try {
+        const res = await fetch("http://localhost:8000/api/mfa/validar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: parseInt(usuario_id), codigo }),
+        });
+
+        if (!res.ok) {
+          mostrarMensaje("mfaAlert", "Código incorrecto. Inténtalo de nuevo.", "error");
+          return;
+        }
+
+        // Código correcto → cargar datos del usuario y entrar
+        const userRes = await fetch(`http://localhost:8000/api/usuarios/${usuario_id}`);
+        const usuario = await userRes.json();
+        sessionStorage.removeItem("mfa_usuario_id");
+        localStorage.setItem("usuario", JSON.stringify(usuario));
+        window.location.href = "./pantalladeInicio.html";
+
+      } catch (err) {
+        mostrarMensaje("mfaAlert", "No se pudo conectar con el servidor.", "error");
+      }
+    });
+  }
 }
 
 async function cargarTalleresEnSelect() {
