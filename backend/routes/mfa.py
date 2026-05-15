@@ -174,7 +174,13 @@ def validar_mfa(data: MFAValidarRequest):
         if not totp.verify(data.codigo, valid_window=1):
             raise HTTPException(status_code=401, detail="Código MFA incorrecto o expirado.")
 
-        return {"mensaje": "Código MFA válido. Acceso autorizado."}
+        cur.execute(
+            "SELECT id, nombre, email, telefono FROM usuarios WHERE id = %s",
+            (data.usuario_id,),
+        )
+        datos_usuario = dict(cur.fetchone())
+
+        return {"mensaje": "Código MFA válido. Acceso autorizado.", "usuario": datos_usuario}
 
     except HTTPException:
         raise

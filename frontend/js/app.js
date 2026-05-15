@@ -26,7 +26,7 @@ function activarFormularioLogin() {
       const res = await fetch("http://localhost:8000/api/usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, contrasena }),
+        body: JSON.stringify({ email, password: contrasena }),
       });
 
       if (!res.ok) {
@@ -36,16 +36,10 @@ function activarFormularioLogin() {
       }
 
       const data = await res.json();
-
-      // ── Si el usuario tiene MFA activo, mostrar pantalla de código ──
       if (data.mfa_requerido) {
-        sessionStorage.setItem("mfa_usuario_id", data.usuario_id);
-        document.getElementById("loginForm").style.display = "none";
-        document.getElementById("mfaSection").style.display = "block";
+        window.location.href = `./mfa-login.html?usuario_id=${data.usuario_id}`;
         return;
       }
-
-      // ── Sin MFA: login completo ──
       localStorage.setItem("usuario", JSON.stringify(data.usuario));
       window.location.href = "./pantalladeInicio.html";
 

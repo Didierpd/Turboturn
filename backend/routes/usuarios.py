@@ -66,7 +66,7 @@ def registro(data: UsuarioRegistro):
         hashed = _hash_password(data.password)
         cur.execute(
             """
-            INSERT INTO usuarios (nombre, email, password, telefono)
+            INSERT INTO usuarios (nombre, email, contrasena, telefono)
             VALUES (%s, %s, %s, %s)
             RETURNING id, nombre, email, telefono
             """,
@@ -103,9 +103,9 @@ def login(data: UsuarioLogin):
         hashed = _hash_password(data.password)
         cur.execute(
             """
-            SELECT id, nombre, email, telefono, mfa_habilitado
+            SELECT id, nombre, email, telefono, rol, mfa_habilitado
             FROM usuarios
-            WHERE email = %s AND password = %s
+            WHERE email = %s AND contrasena = %s
             """,
             (data.email, hashed),
         )
@@ -136,6 +136,68 @@ def login(data: UsuarioLogin):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en el login: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/talleres-pendientes", summary="Listar talleres pendientes de aprobación")
+def talleres_pendientes():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            "SELECT id, nombre, email, telefono, creado_en FROM usuarios WHERE rol = 'taller' AND estado = 'pendiente'"
+        )
+        return [dict(r) for r in cur.fetchall()]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/todos", summary="Listar todos los usuarios")
+def todos_usuarios():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute("SELECT id, nombre, email, rol, estado, telefono FROM usuarios ORDER BY id")
+        return [dict(r) for r in cur.fetchall()]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{usuario_id}/aprobar", summary="Aprobar taller")
+def aprobar_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE usuarios SET estado = 'activo' WHERE id = %s AND rol = 'taller'", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Taller aprobado."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{usuario_id}/rechazar", summary="Rechazar taller")
+def rechazar_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE usuarios SET estado = 'rechazado' WHERE id = %s AND rol = 'taller'", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Taller rechazado."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
     finally:
         cur.close()
         conn.close()

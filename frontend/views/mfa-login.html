@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verificación MFA - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn</h2>
+      <div class="nav-links">
+        <a href="../index.html">Inicio</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card" style="max-width:450px;margin:60px auto;">
+        <h1>Verificación de dos pasos</h1>
+        <p style="color:#64748b;margin-bottom:24px;">
+          Abre Google Authenticator e ingresa el código de 6 dígitos.
+        </p>
+
+        <form id="mfaForm">
+          <div class="form-group">
+            <label for="codigo">Código de Google Authenticator</label>
+            <input type="text" id="codigo" maxlength="6" placeholder="123456"
+              style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+          </div>
+          <button type="submit" class="btn-submit" style="width:100%;">Verificar</button>
+        </form>
+
+        <div id="mfaAlert" class="alert"></div>
+      </div>
+    </div>
+
+    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const usuarioId = params.get("usuario_id");
+    if (!usuarioId) window.location.href = "./login.html";
+
+    document.getElementById("mfaForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigo").value.trim();
+
+      try {
+        const res = await fetch("http://localhost:8000/api/mfa/validar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: parseInt(usuarioId), codigo })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          mostrarMensaje("mfaAlert", data.detail || "Código incorrecto.", "error");
+          return;
+        }
+
+        localStorage.setItem("usuario", JSON.stringify(data.usuario));
+        mostrarMensaje("mfaAlert", "Verificación exitosa. Redirigiendo...", "success");
+        setTimeout(() => { window.location.href = "./pantalladeInicio.html"; }, 1500);
+      } catch (err) {
+        mostrarMensaje("mfaAlert", "No se pudo conectar con el servidor.", "error");
+      }
+    });
+  </script>
+</body>
+</html>
