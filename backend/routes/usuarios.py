@@ -21,6 +21,7 @@ import psycopg2.extras
 import hashlib
 
 from database import get_connection
+from email_utils import generar_codigo, enviar_correo_verificacion
 
 router = APIRouter()
 
@@ -34,6 +35,9 @@ class UsuarioRegistro(BaseModel):
     email: EmailStr
     password: str
     telefono: Optional[str] = None
+    rol: Optional[str] = "usuario"
+    nombre_taller: Optional[str] = None
+    direccion_taller: Optional[str] = None
 
 class UsuarioLogin(BaseModel):
     email: EmailStr
@@ -66,15 +70,40 @@ def registro(data: UsuarioRegistro):
         hashed = _hash_password(data.password)
         cur.execute(
             """
-            INSERT INTO usuarios (nombre, email, contrasena, telefono)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id, nombre, email, telefono
+            INSERT INTO usuarios (nombre, email, contrasena, telefono, rol)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, nombre, email, telefono, rol
             """,
-            (data.nombre, data.email, hashed, data.telefono),
+            (data.nombre, data.email, hashed, data.telefono, data.rol),
         )
         conn.commit()
         nuevo = dict(cur.fetchone())
-        return {"mensaje": "Usuario registrado correctamente.", "usuario": nuevo}
+
+        if data.rol == "taller" and data.nombre_taller and data.direccion_taller:
+            cur.execute(
+                """
+                INSERT INTO talleres (nombre, direccion, admin_id)
+                VALUES (%s, %s, %s)
+                """,
+                (data.nombre_taller, data.direccion_taller, nuevo["id"]),
+            )
+            conn.commit()
+
+        # Generar y guardar código de verificación
+        codigo = generar_codigo()
+        cur.execute(
+            """
+            INSERT INTO codigos_verificacion (email, codigo)
+            VALUES (%s, %s)
+            """,
+            (data.email, codigo),
+        )
+        conn.commit()
+
+        # Enviar correo
+        enviar_correo_verificacion(data.email, data.nombre, codigo)
+
+        return {"mensaje": "Usuario registrado correctamente. Te enviamos un código a tu correo.", "usuario": nuevo}
 
     except HTTPException:
         raise
@@ -198,6 +227,41 @@ def rechazar_taller(usuario_id: int):
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+class VerificarCodigoRequest(BaseModel):
+    email: EmailStr
+    codigo: str
+
+@router.post("/verificar-codigo", summary="Verificar código de registro")
+def verificar_codigo(data: VerificarCodigoRequest):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT id FROM codigos_verificacion
+            WHERE email = %s AND codigo = %s AND usado = FALSE AND expira_en > NOW()
+            ORDER BY creado_en DESC LIMIT 1
+            """,
+            (data.email, data.codigo),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=400, detail="Código incorrecto o expirado.")
+
+        cur.execute("UPDATE codigos_verificacion SET usado = TRUE WHERE id = %s", (row["id"],))
+        cur.execute("UPDATE usuarios SET estado = 'activo' WHERE email = %s", (data.email,))
+        conn.commit()
+        return {"mensaje": "Cuenta verificada correctamente."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al verificar: {str(e)}")
     finally:
         cur.close()
         conn.close()

@@ -299,7 +299,7 @@ function activarFormularioRegistro() {
       nombre: document.getElementById("nombre").value,
       email: document.getElementById("email").value,
       telefono: document.getElementById("telefono").value,
-      contrasena: document.getElementById("contrasena").value,
+      password: document.getElementById("contrasena").value,
       rol,
     };
 
