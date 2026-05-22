@@ -41,10 +41,10 @@ a {
 .landing-content h1 {
   font-size: 3rem;
   margin-bottom: 15px;
-}
+}	
 
 .landing-content p {
-  font-size: 1.2rem;
+  font-size: 1.8rem;
   margin-bottom: 30px;
 }
 
@@ -56,7 +56,8 @@ a {
 }
 
 .btn {
-  padding: 12px 22px;
+  padding: 18px 40px;
+font-size: 1.2rem;
   border-radius: 10px;
   display: inline-block;
   font-weight: bold;
@@ -282,3 +283,9 @@ table th {
     gap: 15px;
   }
 }
+.landing-logo {
+  width: 650px;
+  display: block;
+  margin: 0 auto -100px;
+}
+
