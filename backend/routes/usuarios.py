@@ -14,6 +14,7 @@ El login ahora tiene DOS fases:
            Si es válido, el frontend considera la sesión iniciada.
 """
 
+import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -25,10 +26,6 @@ from email_utils import generar_codigo, enviar_correo_verificacion
 
 router = APIRouter()
 
-
-# ──────────────────────────────────────────────
-# Schemas
-# ──────────────────────────────────────────────
 
 class UsuarioRegistro(BaseModel):
     nombre: str
@@ -44,66 +41,42 @@ class UsuarioLogin(BaseModel):
     password: str
 
 
-# ──────────────────────────────────────────────
-# Helper
-# ──────────────────────────────────────────────
-
 def _hash_password(password: str) -> str:
-    """SHA-256 simple. Si ya usas bcrypt, reemplaza aquí."""
     return hashlib.sha256(password.encode()).hexdigest()
 
-
-# ──────────────────────────────────────────────
-# Endpoints
-# ──────────────────────────────────────────────
 
 @router.post("/registro", summary="Registrar nuevo usuario")
 def registro(data: UsuarioRegistro):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        # Verificar email duplicado
         cur.execute("SELECT id FROM usuarios WHERE email = %s", (data.email,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="El email ya está registrado.")
 
         hashed = _hash_password(data.password)
-        cur.execute(
-            """
-            INSERT INTO usuarios (nombre, email, contrasena, telefono, rol)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING id, nombre, email, telefono, rol
-            """,
-            (data.nombre, data.email, hashed, data.telefono, data.rol),
-        )
-        conn.commit()
-        nuevo = dict(cur.fetchone())
-
-        if data.rol == "taller" and data.nombre_taller and data.direccion_taller:
-            cur.execute(
-                """
-                INSERT INTO talleres (nombre, direccion, admin_id)
-                VALUES (%s, %s, %s)
-                """,
-                (data.nombre_taller, data.direccion_taller, nuevo["id"]),
-            )
-            conn.commit()
-
-        # Generar y guardar código de verificación
+        datos = {
+            "nombre": data.nombre,
+            "email": data.email,
+            "contrasena": hashed,
+            "telefono": data.telefono,
+            "rol": data.rol,
+            "nombre_taller": data.nombre_taller,
+            "direccion_taller": data.direccion_taller,
+        }
         codigo = generar_codigo()
         cur.execute(
             """
-            INSERT INTO codigos_verificacion (email, codigo)
-            VALUES (%s, %s)
+            INSERT INTO codigos_verificacion (email, codigo, datos_registro)
+            VALUES (%s, %s, %s)
             """,
-            (data.email, codigo),
+            (data.email, codigo, json.dumps(datos)),
         )
         conn.commit()
 
-        # Enviar correo
         enviar_correo_verificacion(data.email, data.nombre, codigo)
 
-        return {"mensaje": "Usuario registrado correctamente. Te enviamos un código a tu correo.", "usuario": nuevo}
+        return {"mensaje": "Te enviamos un código a tu correo. Ingrésalo para completar el registro."}
 
     except HTTPException:
         raise
@@ -117,15 +90,6 @@ def registro(data: UsuarioRegistro):
 
 @router.post("/login", summary="Iniciar sesión (fase 1 de 2 si MFA está activo)")
 def login(data: UsuarioLogin):
-    """
-    Fase 1 del login.
-
-    Respuestas posibles:
-      - MFA desactivado → devuelve datos del usuario (sesión completa).
-      - MFA activado    → devuelve { mfa_requerido: true, usuario_id: X }
-                          El frontend debe pedir el código al usuario
-                          y llamar a POST /api/mfa/validar.
-    """
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
@@ -145,7 +109,6 @@ def login(data: UsuarioLogin):
 
         usuario = dict(usuario)
 
-        # ── Si el usuario tiene MFA activo, detener aquí ──
         if usuario.get("mfa_habilitado"):
             return {
                 "mfa_requerido": True,
@@ -153,7 +116,6 @@ def login(data: UsuarioLogin):
                 "mensaje": "Ingresa el código de Google Authenticator para continuar.",
             }
 
-        # ── Sin MFA: login completo ──
         usuario.pop("mfa_habilitado", None)
         return {
             "mfa_requerido": False,
@@ -243,7 +205,7 @@ def verificar_codigo(data: VerificarCodigoRequest):
     try:
         cur.execute(
             """
-            SELECT id FROM codigos_verificacion
+            SELECT id, datos_registro FROM codigos_verificacion
             WHERE email = %s AND codigo = %s AND usado = FALSE AND expira_en > NOW()
             ORDER BY creado_en DESC LIMIT 1
             """,
@@ -253,10 +215,43 @@ def verificar_codigo(data: VerificarCodigoRequest):
         if not row:
             raise HTTPException(status_code=400, detail="Código incorrecto o expirado.")
 
+        datos = row["datos_registro"]
+        if not datos:
+            raise HTTPException(status_code=400, detail="No se encontraron datos de registro.")
+
+        estado_inicial = "pendiente" if datos.get("rol") == "taller" else "activo"
+
+        cur.execute(
+            """
+            INSERT INTO usuarios (nombre, email, contrasena, telefono, rol, estado)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id, nombre, email, telefono, rol
+            """,
+            (
+                datos["nombre"],
+                datos["email"],
+                datos["contrasena"],
+                datos.get("telefono"),
+                datos.get("rol", "usuario"),
+                estado_inicial,
+            ),
+        )
+        nuevo = dict(cur.fetchone())
+
+        if datos.get("rol") == "taller" and datos.get("nombre_taller") and datos.get("direccion_taller"):
+            cur.execute(
+                """
+                INSERT INTO talleres (nombre, direccion, admin_id)
+                VALUES (%s, %s, %s)
+                """,
+                (datos["nombre_taller"], datos["direccion_taller"], nuevo["id"]),
+            )
+
         cur.execute("UPDATE codigos_verificacion SET usado = TRUE WHERE id = %s", (row["id"],))
-        cur.execute("UPDATE usuarios SET estado = 'activo' WHERE email = %s", (data.email,))
         conn.commit()
-        return {"mensaje": "Cuenta verificada correctamente."}
+
+        return {"mensaje": "Cuenta verificada correctamente. Ya puedes iniciar sesión."}
+
     except HTTPException:
         raise
     except Exception as e:

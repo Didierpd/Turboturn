@@ -2,10 +2,10 @@ import psycopg2
 import psycopg2.extras
 
 DB_CONFIG = {
-    "host": "localhost",
-    "database": "Turboturn_db",
+    "host": "turboturb-db.cd6wwa42q63k.us-east-2.rds.amazonaws.com",
+    "database": "postgres",
     "user": "postgres",
-    "password": "1234",
+    "password": "Turboturn2026*",
     "port": 5432,
 }
 
