@@ -48,3 +48,35 @@ def create_vehiculo(data: VehiculoData):
     finally:
         cur.close()
         conn.close()
+
+
+@router.delete("/{vehiculo_id}", summary="Eliminar un vehículo")
+def delete_vehiculo(vehiculo_id: int, usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            "SELECT id FROM vehiculos WHERE id = %s AND usuario_id = %s",
+            (vehiculo_id, usuario_id),
+        )
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Vehículo no encontrado")
+
+        cur.execute("SELECT id FROM citas WHERE vehiculo_id = %s LIMIT 1", (vehiculo_id,))
+        if cur.fetchone():
+            raise HTTPException(
+                status_code=400,
+                detail="No puedes eliminar este vehículo porque ya tiene citas asociadas.",
+            )
+
+        cur.execute("DELETE FROM vehiculos WHERE id = %s RETURNING id", (vehiculo_id,))
+        conn.commit()
+        return {"mensaje": "Vehículo eliminado correctamente."}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al eliminar vehículo")
+    finally:
+        cur.close()
+        conn.close()

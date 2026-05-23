@@ -39,7 +39,7 @@
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=6"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const usuarioId = params.get("usuario_id");
@@ -50,7 +50,7 @@
       const codigo = document.getElementById("codigo").value.trim();
 
       try {
-        const res = await fetch("http://localhost:8000/api/mfa/validar", {
+        const res = await fetch("/api/mfa/validar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario_id: parseInt(usuarioId), codigo })

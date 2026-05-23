@@ -47,7 +47,7 @@
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=6"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
@@ -60,7 +60,7 @@
     async function cargarHistorial() {
       const tbody = document.getElementById("historialBody");
       try {
-        const res = await fetch(`http://localhost:8000/api/historial/${usuario.id}`);
+        const res = await fetch(`/api/historial/${usuario.id}`);
         const historial = await res.json();
         if (historial.length === 0) {
           tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;">No hay servicios registrados aún.</td></tr>`;

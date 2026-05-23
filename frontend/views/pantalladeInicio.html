@@ -12,11 +12,13 @@
     if (!usuario) {
       window.location.href = "./login.html";
     } else if (usuario.rol === "admin") {
-      window.location.href = "./panel-admin.html";
+      window.location.href = "./panel-admin.html?v=6";
     } else if (usuario.rol === "taller") {
-      window.location.href = "./panel-taller.html";
+      window.location.href = "./panel-taller.html?v=6";
+    } else if (usuario.rol === "mecanico") {
+      window.location.href = "./panel-mecanico.html?v=6";
     } else {
-      window.location.href = "./panel-usuario.html";
+      window.location.href = "./panel-usuario.html?v=6";
     }
   </script>
 </body>

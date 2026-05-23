@@ -43,7 +43,7 @@
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js?v=3"></script>
+  <script src="../js/app.js?v=6"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const email = params.get("email");
@@ -54,7 +54,7 @@
       const codigo = document.getElementById("codigo").value.trim();
 
       try {
-        const res = await fetch("http://localhost:8000/api/usuarios/verificar-codigo", {
+        const res = await fetch("/api/usuarios/verificar-codigo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, codigo })

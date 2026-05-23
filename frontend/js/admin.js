@@ -3,7 +3,7 @@ async function cargarTalleresPendientes() {
   if (!tbody) return;
 
   try {
-    const res = await fetch("http://localhost:8000/api/usuarios/talleres-pendientes");
+    const res = await fetch("/api/usuarios/talleres-pendientes");
     const talleres = await res.json();
 
     if (talleres.length === 0) {
@@ -30,7 +30,7 @@ async function cargarTalleresPendientes() {
 
 async function aprobarTaller(id) {
   try {
-    const res = await fetch(`http://localhost:8000/api/usuarios/${id}/aprobar`, { method: "PUT" });
+    const res = await fetch(`/api/usuarios/${id}/aprobar`, { method: "PUT" });
     if (res.ok) {
       document.getElementById(`fila-${id}`).remove();
       mostrarMensaje("pendientesAlert", "Taller aprobado correctamente.", "success");
@@ -43,7 +43,7 @@ async function aprobarTaller(id) {
 
 async function rechazarTaller(id) {
   try {
-    const res = await fetch(`http://localhost:8000/api/usuarios/${id}/rechazar`, { method: "PUT" });
+    const res = await fetch(`/api/usuarios/${id}/rechazar`, { method: "PUT" });
     if (res.ok) {
       document.getElementById(`fila-${id}`).remove();
       mostrarMensaje("pendientesAlert", "Taller rechazado.", "success");
@@ -59,7 +59,7 @@ async function cargarTodosUsuarios() {
   if (!tbody) return;
 
   try {
-    const res = await fetch("http://localhost:8000/api/usuarios/todos");
+    const res = await fetch("/api/usuarios/todos");
     const usuarios = await res.json();
 
     const badgeRol = { usuario: "badge-confirmada", taller: "badge-pendiente", admin: "badge-completada" };

@@ -15,6 +15,8 @@
         <a href="#" class="tab-btn active" data-tab="agenda">Agenda</a>
         <a href="#" class="tab-btn" data-tab="citas">Todas las citas</a>
         <a href="#" class="tab-btn" data-tab="clientes">Clientes</a>
+        <a href="#" class="tab-btn" data-tab="mecanicos">Mecánicos</a>
+        <a href="#" class="tab-btn" data-tab="servicios">Servicios</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
@@ -24,7 +26,7 @@
       <!-- Resumen siempre visible -->
       <div class="card">
         <h1 id="bienvenida">Panel del Taller</h1>
-        <p style="color:#64748b;">Gestiona tu agenda, citas y clientes.</p>
+        <p style="color:#64748b;">Gestiona tu agenda, citas, clientes y mecánicos.</p>
       </div>
 
       <div class="grid" style="margin-bottom:20px;">
@@ -54,12 +56,13 @@
                   <th>Cliente</th>
                   <th>Vehículo</th>
                   <th>Notas</th>
+                  <th>Mecánico</th>
                   <th>Estado</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody id="agendaHoyBody">
-                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#64748b;">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -78,12 +81,13 @@
                   <th>Cliente</th>
                   <th>Vehículo</th>
                   <th>Notas</th>
+                  <th>Mecánico</th>
                   <th>Estado</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody id="todasCitasBody">
-                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#64748b;">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -113,13 +117,86 @@
         </div>
       </div>
 
+      <!-- Tab Mecánicos -->
+      <div id="tab-mecanicos" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Mecánicos del taller</h2>
+          <form id="mecanicoForm" style="margin-top:15px;">
+            <div class="grid">
+              <div class="form-group">
+                <label for="mecanicoNombre">Nombre</label>
+                <input type="text" id="mecanicoNombre" placeholder="Nombre del mecánico" minlength="3" required />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoEmail">Correo de acceso</label>
+                <input type="email" id="mecanicoEmail" placeholder="correo@ejemplo.com" required />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoPassword">Contraseña</label>
+                <input type="password" id="mecanicoPassword" placeholder="Mínimo 6 caracteres" minlength="6" required />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoTelefono">Teléfono</label>
+                <input type="tel" id="mecanicoTelefono" placeholder="Teléfono" />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoEspecialidad">Especialidad</label>
+                <input type="text" id="mecanicoEspecialidad" placeholder="Frenos, motor, diagnóstico..." />
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">Registrar mecánico</button>
+          </form>
+          <div id="mecanicoAlert" class="alert" style="margin-top:12px;"></div>
+
+          <div class="table-wrapper" style="margin-top:20px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Correo</th>
+                  <th>Especialidad</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="mecanicosBody">
+                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Servicios -->
+      <div id="tab-servicios" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Servicios del taller</h2>
+          <div class="table-wrapper" style="margin-top:20px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Descripción</th>
+                  <th>Precio</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="serviciosTallerBody">
+                <tr><td colspan="4" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js?v=3"></script>
-  <script src="../js/taller.js?v=2"></script>
+  <script src="../js/app.js?v=6"></script>
+  <script src="../js/taller.js?v=6"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "taller") { window.location.href = "./login.html"; }
@@ -140,6 +217,8 @@
       if (tab === "agenda") cargarAgendaHoy();
       if (tab === "citas") cargarTodasCitas();
       if (tab === "clientes") cargarClientes();
+      if (tab === "mecanicos") cargarMecanicos();
+      if (tab === "servicios") cargarServiciosTaller();
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -150,6 +229,7 @@
     });
 
     cargarAgendaHoy();
+    activarFormularioMecanicos();
   </script>
 </body>
 </html>

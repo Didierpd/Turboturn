@@ -64,12 +64,13 @@
               <tr>
                 <th>Fecha / Hora</th>
                 <th>Vehículo</th>
+                <th>Taller</th>
                 <th>Estado</th>
                 <th>Notas</th>
               </tr>
             </thead>
             <tbody id="citasBody">
-              <tr><td colspan="4" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -79,7 +80,7 @@
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=6"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }

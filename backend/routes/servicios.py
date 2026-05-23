@@ -5,12 +5,106 @@ from database import get_connection
 router = APIRouter()
 
 
+def _get_taller_id(cur, usuario_id: int):
+    cur.execute("SELECT id FROM talleres WHERE admin_id = %s", (usuario_id,))
+    taller = cur.fetchone()
+    if not taller:
+        raise HTTPException(status_code=404, detail="Taller no encontrado para este usuario.")
+    return taller["id"]
+
+
+@router.get("/taller-usuario/{usuario_id}", summary="Obtener servicios del taller por usuario taller")
+def get_servicios_taller_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        taller_id = _get_taller_id(cur, usuario_id)
+        cur.execute(
+            """
+            SELECT id, taller_id, nombre, descripcion, precio
+            FROM servicios
+            WHERE taller_id = %s
+            ORDER BY nombre
+            """,
+            (taller_id,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener servicios del taller")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.delete("/{servicio_id}/taller-usuario/{usuario_id}", summary="Eliminar servicio de un taller")
+def delete_servicio_taller(servicio_id: int, usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        taller_id = _get_taller_id(cur, usuario_id)
+        cur.execute(
+            "SELECT id FROM servicios WHERE id = %s AND taller_id = %s",
+            (servicio_id, taller_id),
+        )
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Servicio no encontrado")
+
+        cur.execute("SELECT id FROM historial_servicios WHERE servicio_id = %s LIMIT 1", (servicio_id,))
+        if cur.fetchone():
+            raise HTTPException(
+                status_code=400,
+                detail="No puedes eliminar este servicio porque ya aparece en historiales de clientes.",
+            )
+
+        cur.execute("DELETE FROM servicios WHERE id = %s RETURNING id", (servicio_id,))
+        conn.commit()
+        return {"mensaje": "Servicio eliminado correctamente."}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al eliminar servicio")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/taller/{taller_id}", summary="Obtener servicios de un taller")
+def get_servicios_taller(taller_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT id, taller_id, nombre, descripcion, precio
+            FROM servicios
+            WHERE taller_id = %s
+            ORDER BY nombre
+            """,
+            (taller_id,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener servicios del taller")
+    finally:
+        cur.close()
+        conn.close()
+
+
 @router.get("/", summary="Obtener todos los servicios disponibles")
 def get_servicios():
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        cur.execute("SELECT * FROM servicios")
+        cur.execute(
+            """
+            SELECT id, taller_id, nombre, descripcion, precio
+            FROM servicios
+            ORDER BY nombre
+            """
+        )
         return [dict(row) for row in cur.fetchall()]
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener servicios")

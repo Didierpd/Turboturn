@@ -169,7 +169,7 @@
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
+                <th>Fecha / Hora</th>
                 <th>Vehículo</th>
                 <th>Taller</th>
                 <th>Estado</th>
@@ -187,13 +187,13 @@
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
  
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=6"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
     document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
 
-    fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`)
+    fetch(`/api/vehiculos/${usuario.id}`)
       .then(r => r.json())
       .then(vehiculos => {
         if (vehiculos.length === 0) {
@@ -202,7 +202,8 @@
           alerta.innerHTML = "⚠️ <strong>Registra tu vehículo primero</strong> para poder reservar citas. <a href='./vehiculos.html' style='color:#1d4ed8;'>Ir a Mis vehículos</a>";
           document.getElementById("bienvenida").after(alerta);
         }
-      });
+      })
+      .catch(() => {});
  
     document.getElementById("btnSalir").addEventListener("click", function(e) {
       e.preventDefault();
@@ -213,7 +214,7 @@
     // ── Cargar estado MFA al entrar ──
     async function cargarEstadoMFA() {
       try {
-        const res = await fetch(`http://localhost:8000/api/mfa/estado/${usuario.id}`);
+        const res = await fetch(`/api/mfa/estado/${usuario.id}`);
         const data = await res.json();
  
         const badge = document.getElementById("mfaBadge");
@@ -234,14 +235,23 @@
           btnDesactivar.style.display = "none";
         }
       } catch (err) {
-        console.error("Error al cargar estado MFA:", err);
+        const badge = document.getElementById("mfaBadge");
+        const btnActivar = document.getElementById("btnActivarMFA");
+        const btnDesactivar = document.getElementById("btnDesactivarMFA");
+        if (badge) {
+          badge.textContent = "MFA no disponible";
+          badge.style.background = "#fee2e2";
+          badge.style.color = "#991b1b";
+        }
+        if (btnActivar) btnActivar.style.display = "none";
+        if (btnDesactivar) btnDesactivar.style.display = "none";
       }
     }
  
     // ── Botón Activar: genera QR ──
     document.getElementById("btnActivarMFA").addEventListener("click", async function() {
       try {
-        const res = await fetch("http://localhost:8000/api/mfa/configurar", {
+        const res = await fetch("/api/mfa/configurar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario_id: usuario.id }),
@@ -262,7 +272,7 @@
       e.preventDefault();
       const codigo = document.getElementById("codigoActivacion").value.trim();
       try {
-        const res = await fetch("http://localhost:8000/api/mfa/verificar", {
+        const res = await fetch("/api/mfa/verificar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario_id: usuario.id, codigo }),
@@ -292,7 +302,7 @@
       e.preventDefault();
       const codigo = document.getElementById("codigoDesactivar").value.trim();
       try {
-        const res = await fetch("http://localhost:8000/api/mfa/deshabilitar", {
+        const res = await fetch("/api/mfa/deshabilitar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario_id: usuario.id, codigo }),

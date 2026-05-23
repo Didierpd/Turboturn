@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Mecánico - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn - Mecánico</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
+      <div class="nav-links">
+        <a class="active" href="./panel-mecanico.html">Trabajos</a>
+        <a href="#" id="btnSalir">Salir</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1 id="bienvenida">Panel del mecánico</h1>
+        <p id="tallerNombre" style="color:#64748b;"></p>
+      </div>
+
+      <div class="grid" style="margin-bottom:20px;">
+        <div class="info-box">
+          <h3>Asignadas</h3>
+          <p id="trabajosAsignados" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
+        </div>
+        <div class="info-box">
+          <h3>Pendientes</h3>
+          <p id="trabajosPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
+        </div>
+        <div class="info-box">
+          <h3>Terminadas</h3>
+          <p id="trabajosTerminados" style="font-size:2rem;font-weight:bold;color:#16a34a;">-</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Mis trabajos asignados</h2>
+        <div class="table-wrapper" style="margin-top:15px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Cliente</th>
+                <th>Vehículo</th>
+                <th>Notas</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="trabajosBody">
+              <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" id="finalizarTrabajoCard" style="display:none;">
+        <h2>Finalizar trabajo</h2>
+        <form id="finalizarTrabajoForm">
+          <input type="hidden" id="finalizarCitaId" />
+          <div class="form-group">
+            <label for="servicioRealizado">Servicio realizado</label>
+            <select id="servicioRealizado" required>
+              <option value="">Selecciona un servicio</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="costoFinal">Costo final</label>
+            <input type="number" id="costoFinal" min="0" step="100" placeholder="Costo final del servicio" required />
+          </div>
+          <div class="form-group">
+            <label for="observacionesFinales">Observaciones</label>
+            <textarea id="observacionesFinales" rows="3" placeholder="Describe el trabajo realizado..."></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="submit" class="btn-submit">Guardar en historial</button>
+            <button type="button" class="btn-submit" onclick="cerrarFormularioFinalizacion()" style="background:#64748b;">Cancelar</button>
+          </div>
+        </form>
+        <div id="finalizarTrabajoAlert" class="alert" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+  </div>
+
+  <script src="../js/mecanico.js?v=6"></script>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario || usuario.rol !== "mecanico") { window.location.href = "./login.html"; }
+
+    document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+    document.getElementById("tallerNombre").textContent = usuario.taller ? "Taller: " + usuario.taller : "";
+
+    document.getElementById("btnSalir").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("usuario");
+      window.location.href = "./login.html";
+    });
+
+    cargarTrabajosMecanico();
+    activarFormularioFinalizacion();
+  </script>
+</body>
+</html>

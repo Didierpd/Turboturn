@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import uvicorn
 import os
 
-from routes import usuarios, vehiculos, citas, servicios, historial, mfa   # ← mfa agregado
+from routes import usuarios, vehiculos, citas, servicios, historial, mfa, mecanicos   # ← mfa agregado
 
 app = FastAPI(
     title="TurboTurn API",
@@ -26,8 +27,16 @@ app.include_router(citas.router,     prefix="/api/citas",     tags=["Citas"])
 app.include_router(servicios.router, prefix="/api/servicios", tags=["Servicios"])
 app.include_router(historial.router, prefix="/api/historial", tags=["Historial"])
 app.include_router(mfa.router,       prefix="/api/mfa",       tags=["MFA"])   # ← nuevo
+app.include_router(mecanicos.router, prefix="/api/mecanicos", tags=["Mecánicos"])
 
 frontend_path = os.path.join(os.path.dirname(__file__), "../frontend")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(os.path.join(frontend_path, "images", "logo_turbo.png"))
+
+
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 
 if __name__ == "__main__":

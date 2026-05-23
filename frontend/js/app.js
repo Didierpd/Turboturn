@@ -23,7 +23,7 @@ function activarFormularioLogin() {
     const contrasena = document.getElementById("contrasena").value;
 
     try {
-      const res = await fetch("http://localhost:8000/api/usuarios/login", {
+      const res = await fetch("/api/usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: contrasena }),
@@ -31,7 +31,20 @@ function activarFormularioLogin() {
 
       if (!res.ok) {
         const err = await res.json();
-        mostrarMensaje("loginAlert", err.detail || "Correo o contraseña incorrectos.", "error");
+        const mecanicoRes = await fetch("/api/mecanicos/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password: contrasena }),
+        });
+
+        if (mecanicoRes.ok) {
+          const mecanicoData = await mecanicoRes.json();
+          localStorage.setItem("usuario", JSON.stringify(mecanicoData.usuario));
+          window.location.href = "./pantalladeInicio.html";
+          return;
+        }
+
+        mostrarMensaje("loginAlert", "Correo o contraseña incorrectos.", "error");
         return;
       }
 
@@ -58,7 +71,7 @@ function activarFormularioLogin() {
       const codigo = document.getElementById("codigoMFA").value.trim();
 
       try {
-        const res = await fetch("http://localhost:8000/api/mfa/validar", {
+        const res = await fetch("/api/mfa/validar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario_id: parseInt(usuario_id), codigo }),
@@ -70,7 +83,7 @@ function activarFormularioLogin() {
         }
 
         // Código correcto → cargar datos del usuario y entrar
-        const userRes = await fetch(`http://localhost:8000/api/usuarios/${usuario_id}`);
+        const userRes = await fetch(`/api/usuarios/${usuario_id}`);
         const usuario = await userRes.json();
         sessionStorage.removeItem("mfa_usuario_id");
         localStorage.setItem("usuario", JSON.stringify(usuario));
@@ -87,7 +100,7 @@ async function cargarTalleresEnSelect() {
   const select = document.getElementById("taller");
   if (!select) return;
   try {
-    const res = await fetch("http://localhost:8000/api/citas/talleres-activos");
+    const res = await fetch("/api/citas/talleres-activos");
     const talleres = await res.json();
     if (talleres.length === 0) {
       select.innerHTML = `<option value="">No hay talleres disponibles</option>`;
@@ -108,7 +121,7 @@ async function cargarVehiculosEnSelect() {
   if (!usuario) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`);
+    const res = await fetch(`/api/vehiculos/${usuario.id}`);
     const vehiculos = await res.json();
     if (vehiculos.length === 0) {
       select.innerHTML = `<option value="">No tienes vehículos registrados</option>`;
@@ -124,6 +137,18 @@ async function cargarVehiculosEnSelect() {
 function activarFormularioCitas() {
   const form = document.getElementById("citaForm");
   if (!form) return;
+
+  const fechaInput = document.getElementById("fecha");
+
+  fechaInput.addEventListener("invalid", function () {
+    if (!fechaInput.value) {
+      fechaInput.setCustomValidity("Selecciona o escribe la fecha y la hora completa.");
+    }
+  });
+
+  fechaInput.addEventListener("input", function () {
+    fechaInput.setCustomValidity("");
+  });
 
   cargarTalleresEnSelect();
   cargarVehiculosEnSelect();
@@ -151,8 +176,13 @@ function activarFormularioCitas() {
       return;
     }
 
+    if (!document.getElementById("fecha").value) {
+      mostrarMensaje("citaAlert", "Selecciona o escribe la fecha y la hora completa.", "error");
+      return;
+    }
+
     try {
-      const res = await fetch("http://localhost:8000/api/citas/", {
+      const res = await fetch("/api/citas/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
@@ -180,7 +210,7 @@ async function cargarCitasUsuario() {
   if (!usuario) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/citas/${usuario.id}`);
+    const res = await fetch(`/api/citas/${usuario.id}`);
     const citas = await res.json();
 
     if (citas.length === 0) {
@@ -197,9 +227,12 @@ async function cargarCitasUsuario() {
 
     tbody.innerHTML = citas.map(c => `
       <tr>
-        <td>${new Date(c.fecha_hora).toLocaleString("es-CO")}</td>
+        <td>${new Date(c.fecha_hora).toLocaleString("es-CO", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })}</td>
         <td>${c.marca} (${c.placa})</td>
-        <td>Taller TurboTurn</td>
+        <td>${c.taller || "-"}</td>
         <td><span class="badge ${badgeClass[c.estado] || ''}">${c.estado}</span></td>
         <td>${c.notas || "-"}</td>
       </tr>
@@ -217,8 +250,13 @@ async function cargarVehiculos() {
   if (!tbody) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`);
+    const res = await fetch(`/api/vehiculos/${usuario.id}`);
     const vehiculos = await res.json();
+
+    if (vehiculos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">No tienes vehículos registrados</td></tr>`;
+      return;
+    }
 
     tbody.innerHTML = vehiculos.map(v => `
       <tr>
@@ -227,10 +265,39 @@ async function cargarVehiculos() {
         <td>${v.anio}</td>
         <td>${v.placa}</td>
         <td>${v.color || "-"}</td>
+        <td>
+          <button onclick="eliminarVehiculo(${v.id})" class="btn-submit" style="background:#dc2626;padding:6px 10px;border-radius:8px;font-size:0.8rem;">
+            Eliminar
+          </button>
+        </td>
       </tr>
     `).join("");
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5">Error al cargar vehículos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">Error al cargar vehículos</td></tr>`;
+  }
+}
+
+async function eliminarVehiculo(id) {
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  if (!usuario) return;
+
+  if (!confirm("¿Eliminar este vehículo? Esta acción no se puede deshacer.")) return;
+
+  try {
+    const res = await fetch(`/api/vehiculos/${id}?usuario_id=${usuario.id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      mostrarMensaje("vehiculoAlert", err.detail || "Error al eliminar vehículo.", "error");
+      return;
+    }
+
+    mostrarMensaje("vehiculoAlert", "Vehículo eliminado correctamente.", "success");
+    cargarVehiculos();
+  } catch (err) {
+    mostrarMensaje("vehiculoAlert", "No se pudo conectar con el servidor.", "error");
   }
 }
 
@@ -254,7 +321,7 @@ function activarFormularioVehiculos() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/api/vehiculos/", {
+      const res = await fetch("/api/vehiculos/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
@@ -313,7 +380,7 @@ function activarFormularioRegistro() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/usuarios/registro", {
+      const res = await fetch("/api/usuarios/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),

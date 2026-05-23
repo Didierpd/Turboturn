@@ -34,7 +34,7 @@
     <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
   </div>
 
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=6"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
@@ -47,7 +47,7 @@
     async function cargarServicios() {
       const grid = document.getElementById("serviciosGrid");
       try {
-        const res = await fetch("http://localhost:8000/api/servicios/");
+        const res = await fetch("/api/servicios/");
         const servicios = await res.json();
         if (servicios.length === 0) {
           grid.innerHTML = "<p style='color:#64748b;'>No hay servicios registrados.</p>";
