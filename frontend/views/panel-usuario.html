@@ -10,6 +10,7 @@
   <div class="page">
     <div class="navbar">
       <h2>TurboTurn</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
         <a class="active" href="./panel-usuario.html">Inicio</a>
         <a href="./citas.html">Reservar cita</a>
@@ -191,6 +192,17 @@
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
     document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+
+    fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`)
+      .then(r => r.json())
+      .then(vehiculos => {
+        if (vehiculos.length === 0) {
+          const alerta = document.createElement("div");
+          alerta.style = "background:#fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin:20px 0;color:#92400e;";
+          alerta.innerHTML = "⚠️ <strong>Registra tu vehículo primero</strong> para poder reservar citas. <a href='./vehiculos.html' style='color:#1d4ed8;'>Ir a Mis vehículos</a>";
+          document.getElementById("bienvenida").after(alerta);
+        }
+      });
  
     document.getElementById("btnSalir").addEventListener("click", function(e) {
       e.preventDefault();

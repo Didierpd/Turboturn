@@ -289,3 +289,51 @@ table th {
   margin: 0 auto -100px;
 }
 
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+}
+
+.hamburger span {
+  width: 25px;
+  height: 3px;
+  background: white;
+  border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background: #0f172a;
+    width: 100%;
+    padding: 15px;
+  }
+  .nav-links.open {
+    display: flex;
+  }
+}
+
+input:invalid:not(:placeholder-shown) {
+  border-color: #ef4444;
+  outline-color: #ef4444;
+}
+
+input:invalid:not(:placeholder-shown) + .error-msg {
+  display: block;
+}
+
+.error-msg {
+  display: none;
+  color: #ef4444;
+  font-size: 0.82rem;
+  margin-top: 4px;
+}

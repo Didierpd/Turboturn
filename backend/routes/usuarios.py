@@ -95,17 +95,16 @@ def login(data: UsuarioLogin):
     try:
         hashed = _hash_password(data.password)
         cur.execute(
-            """
-            SELECT id, nombre, email, telefono, rol, mfa_habilitado
-            FROM usuarios
-            WHERE email = %s AND contrasena = %s
-            """,
-            (data.email, hashed),
+            "SELECT id, nombre, email, telefono, rol, mfa_habilitado, contrasena FROM usuarios WHERE email = %s",
+            (data.email,),
         )
         usuario = cur.fetchone()
 
         if not usuario:
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
+            raise HTTPException(status_code=404, detail="El usuario no existe. Regístrate.")
+
+        if usuario["contrasena"] != hashed:
+            raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
 
         usuario = dict(usuario)
 
