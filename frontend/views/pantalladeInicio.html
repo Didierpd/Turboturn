@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="stylesheet" href="../styles/main.css?v=13" />
 </head>
 <body>
   <script>
@@ -12,13 +12,13 @@
     if (!usuario) {
       window.location.href = "./login.html";
     } else if (usuario.rol === "admin") {
-      window.location.href = "./panel-admin.html?v=6";
+      window.location.href = "./panel-admin.html?v=10";
     } else if (usuario.rol === "taller") {
-      window.location.href = "./panel-taller.html?v=6";
+      window.location.href = "./panel-taller.html?v=10";
     } else if (usuario.rol === "mecanico") {
-      window.location.href = "./panel-mecanico.html?v=6";
+      window.location.href = "./panel-mecanico.html?v=10";
     } else {
-      window.location.href = "./panel-usuario.html?v=6";
+      window.location.href = "./panel-usuario.html?v=10";
     }
   </script>
 </body>

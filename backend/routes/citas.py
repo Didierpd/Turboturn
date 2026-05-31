@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 import psycopg2.extras
 from database import get_connection
+from email_utils import enviar_correo_cancelacion_cita
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ def get_talleres_activos():
     try:
         cur.execute(
             """
-            SELECT t.id, t.nombre, t.direccion, t.telefono
+            SELECT t.id, t.nombre, t.direccion, t.telefono, t.latitud, t.longitud
             FROM talleres t
             JOIN usuarios u ON t.admin_id = u.id
             WHERE u.estado = 'activo'
@@ -93,13 +94,42 @@ def get_citas_taller(usuario_id: int):
 
 
 @router.put("/{cita_id}/estado", summary="Cambiar estado de una cita")
-def cambiar_estado_cita(cita_id: int, estado: str, mecanico_id: Optional[int] = None):
+def cambiar_estado_cita(
+    cita_id: int,
+    estado: str,
+    mecanico_id: Optional[int] = None,
+    motivo_cancelacion: Optional[str] = None,
+):
     estados_validos = ("pendiente", "confirmada", "completada", "cancelada")
     if estado not in estados_validos:
         raise HTTPException(status_code=400, detail="Estado no válido")
+    if estado == "cancelada" and (not motivo_cancelacion or len(motivo_cancelacion.strip()) < 5):
+        raise HTTPException(status_code=400, detail="Indica el motivo de cancelación para notificar al cliente.")
+
+    datos_cancelacion = None
     conn = get_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
+        if estado == "cancelada":
+            # Datos necesarios para avisarle al cliente por correo por qué se canceló la cita.
+            cur.execute(
+                """
+                SELECT c.id, c.fecha_hora,
+                       u.nombre AS cliente, u.email AS cliente_email,
+                       t.nombre AS taller,
+                       v.tipo_vehiculo, v.marca, v.placa
+                FROM citas c
+                JOIN usuarios u ON c.usuario_id = u.id
+                JOIN talleres t ON c.taller_id = t.id
+                JOIN vehiculos v ON c.vehiculo_id = v.id
+                WHERE c.id = %s
+                """,
+                (cita_id,),
+            )
+            datos_cancelacion = cur.fetchone()
+            if not datos_cancelacion:
+                raise HTTPException(status_code=404, detail="Cita no encontrada")
+
         if estado == "confirmada":
             if not mecanico_id:
                 raise HTTPException(status_code=400, detail="Selecciona un mecánico para confirmar la cita.")
@@ -131,7 +161,25 @@ def cambiar_estado_cita(cita_id: int, estado: str, mecanico_id: Optional[int] = 
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Cita no encontrada")
         conn.commit()
-        return {"mensaje": f"Cita actualizada a {estado}"}
+
+        if estado == "cancelada" and datos_cancelacion:
+            try:
+                enviar_correo_cancelacion_cita(
+                    email_destino=datos_cancelacion["cliente_email"],
+                    cliente=datos_cancelacion["cliente"],
+                    taller=datos_cancelacion["taller"],
+                    fecha_hora=str(datos_cancelacion["fecha_hora"]),
+                    vehiculo=f"{datos_cancelacion['tipo_vehiculo']} {datos_cancelacion['marca']} ({datos_cancelacion['placa']})",
+                    motivo=motivo_cancelacion.strip(),
+                )
+            except Exception:
+                # La cita queda cancelada aunque el proveedor de correo falle.
+                return {
+                    "mensaje": "Cita cancelada, pero no se pudo enviar el correo al cliente.",
+                    "correo_enviado": False,
+                }
+
+        return {"mensaje": f"Cita actualizada a {estado}", "correo_enviado": estado == "cancelada"}
     except HTTPException:
         raise
     except Exception:

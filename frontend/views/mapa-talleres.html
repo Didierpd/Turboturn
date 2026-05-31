@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Servicios - TurboTurn</title>
+  <title>Mapa de talleres - TurboTurn</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="../styles/main.css?v=13" />
 </head>
 <body>
@@ -15,8 +16,8 @@
         <a href="./pantalladeInicio.html?v=10">Inicio</a>
         <a href="./citas.html">Citas</a>
         <a href="./vehiculos.html">Vehículos</a>
-        <a class="active" href="./servicios.html">Servicios</a>
-        <a href="./mapa-talleres.html">Mapa</a>
+        <a href="./servicios.html">Servicios</a>
+        <a class="active" href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
@@ -24,10 +25,19 @@
 
     <div class="container">
       <div class="card">
-        <h1>Servicios disponibles</h1>
-        <p style="color:#64748b; margin-bottom:20px;">Servicios ofrecidos por el taller.</p>
-        <div class="grid" id="serviciosGrid">
-          <p style="color:#64748b;">Cargando servicios...</p>
+        <h1>Mapa de talleres</h1>
+        <p id="mapaEstado" style="color:#64748b;">Cargando talleres activos...</p>
+      </div>
+
+      <div class="map-layout">
+        <div class="map-panel">
+          <div id="mapaTalleres"></div>
+        </div>
+        <div class="card map-list-card">
+          <h2>Talleres activos</h2>
+          <div id="listaTalleresMapa" class="map-list">
+            <p style="color:#64748b;">Cargando...</p>
+          </div>
         </div>
       </div>
     </div>
@@ -66,7 +76,9 @@
     </footer>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/app.js?v=10"></script>
+  <script src="../js/mapa-talleres.js?v=10"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
@@ -75,28 +87,6 @@
       localStorage.removeItem("usuario");
       window.location.href = "./login.html";
     });
-
-    async function cargarServicios() {
-      const grid = document.getElementById("serviciosGrid");
-      try {
-        const res = await fetch("/api/servicios/");
-        const servicios = await res.json();
-        if (servicios.length === 0) {
-          grid.innerHTML = "<p style='color:#64748b;'>No hay servicios registrados.</p>";
-          return;
-        }
-        grid.innerHTML = servicios.map(s => `
-          <div class="info-box">
-            <h3>${s.nombre}</h3>
-            <p>${s.descripcion || ""}</p>
-            <strong style="color:#1d4ed8;">$${Number(s.precio).toLocaleString("es-CO")}</strong>
-          </div>
-        `).join("");
-      } catch (err) {
-        grid.innerHTML = "<p style='color:#dc2626;'>Error al cargar servicios.</p>";
-      }
-    }
-    cargarServicios();
   </script>
 </body>
 </html>

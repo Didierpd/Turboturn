@@ -266,6 +266,16 @@ async function cambiarEstadoCita(id, estado, mecanicoId = null) {
   try {
     const params = new URLSearchParams({ estado });
     if (mecanicoId) params.append("mecanico_id", mecanicoId);
+    if (estado === "cancelada") {
+      // El motivo se enviará por correo al cliente cuando el taller cancele la cita.
+      const motivo = prompt("Motivo de cancelación para notificar al cliente:");
+      if (!motivo) return;
+      if (motivo.trim().length < 5) {
+        alert("Escribe un motivo de cancelación más claro.");
+        return;
+      }
+      params.append("motivo_cancelacion", motivo.trim());
+    }
 
     const res = await fetch(`/api/citas/${id}/estado?${params.toString()}`, {
       method: "PUT",
@@ -275,6 +285,11 @@ async function cambiarEstadoCita(id, estado, mecanicoId = null) {
       const err = await res.json();
       alert(err.detail || "Error al actualizar la cita.");
       return;
+    }
+
+    const data = await res.json();
+    if (estado === "cancelada" && data.correo_enviado === false) {
+      alert(data.mensaje || "La cita fue cancelada, pero no se pudo enviar el correo al cliente.");
     }
 
     const tabActivo = document.querySelector(".tab-btn.active")?.dataset.tab;

@@ -1,3 +1,32 @@
+function activarFetchSinCache() {
+  if (window.__turboTurnFetchSinCache) return;
+  window.__turboTurnFetchSinCache = true;
+
+  const fetchOriginal = window.fetch.bind(window);
+  window.fetch = function (resource, options = {}) {
+    const requestUrl = typeof resource === "string" ? resource : resource.url;
+    const esApiLocal = requestUrl && requestUrl.startsWith("/api/");
+    const method = (options.method || "GET").toUpperCase();
+
+    if (!esApiLocal) {
+      return fetchOriginal(resource, options);
+    }
+
+    const headers = new Headers(options.headers || {});
+    headers.set("Cache-Control", "no-cache");
+    headers.set("Pragma", "no-cache");
+
+    return fetchOriginal(resource, {
+      ...options,
+      cache: "no-store",
+      headers,
+      method,
+    });
+  };
+}
+
+activarFetchSinCache();
+
 function mostrarMensaje(id, mensaje, tipo = "success") {
   const alertBox = document.getElementById(id);
   if (!alertBox) return;
@@ -21,6 +50,12 @@ function activarFormularioLogin() {
 
     const email = document.getElementById("correo").value;
     const contrasena = document.getElementById("contrasena").value;
+    const submitBtn = form.querySelector("button[type='submit']");
+    const textoOriginal = submitBtn ? submitBtn.textContent : "";
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Ingresando...";
+    }
 
     try {
       const res = await fetch("/api/usuarios/login", {
@@ -31,20 +66,7 @@ function activarFormularioLogin() {
 
       if (!res.ok) {
         const err = await res.json();
-        const mecanicoRes = await fetch("/api/mecanicos/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password: contrasena }),
-        });
-
-        if (mecanicoRes.ok) {
-          const mecanicoData = await mecanicoRes.json();
-          localStorage.setItem("usuario", JSON.stringify(mecanicoData.usuario));
-          window.location.href = "./pantalladeInicio.html";
-          return;
-        }
-
-        mostrarMensaje("loginAlert", "Correo o contraseña incorrectos.", "error");
+        mostrarMensaje("loginAlert", err.detail || "Correo o contraseña incorrectos.", "error");
         return;
       }
 
@@ -54,10 +76,15 @@ function activarFormularioLogin() {
         return;
       }
       localStorage.setItem("usuario", JSON.stringify(data.usuario));
-      window.location.href = "./pantalladeInicio.html";
+      window.location.href = "./pantalladeInicio.html?v=10";
 
     } catch (err) {
       mostrarMensaje("loginAlert", "No se pudo conectar con el servidor.", "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = textoOriginal;
+      }
     }
   });
 
@@ -87,7 +114,7 @@ function activarFormularioLogin() {
         const usuario = await userRes.json();
         sessionStorage.removeItem("mfa_usuario_id");
         localStorage.setItem("usuario", JSON.stringify(usuario));
-        window.location.href = "./pantalladeInicio.html";
+        window.location.href = "./pantalladeInicio.html?v=10";
 
       } catch (err) {
         mostrarMensaje("mfaAlert", "No se pudo conectar con el servidor.", "error");

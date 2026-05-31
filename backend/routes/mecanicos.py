@@ -32,6 +32,11 @@ class TerminarTrabajoData(BaseModel):
     costo_final: Optional[float] = None
 
 
+class RevisionTrabajoData(BaseModel):
+    tiempo_estimado_revision: str
+    trabajo_requerido: str
+
+
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -251,6 +256,7 @@ def get_citas_mecanico(mecanico_id: int):
         cur.execute(
             """
             SELECT c.id, c.fecha_hora, c.estado, c.notas,
+                   c.tiempo_estimado_revision, c.trabajo_requerido,
                    u.nombre AS cliente,
                    v.marca, v.placa, v.tipo_vehiculo,
                    t.nombre AS taller
@@ -268,6 +274,51 @@ def get_citas_mecanico(mecanico_id: int):
         return [dict(row) for row in cur.fetchall()]
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener citas del mecánico")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{mecanico_id}/citas/{cita_id}/revision", summary="Guardar revisión inicial del mecánico")
+def guardar_revision_mecanico(mecanico_id: int, cita_id: int, data: RevisionTrabajoData):
+    # Este apartado permite que el mecánico registre el diagnóstico antes de cerrar el trabajo.
+    tiempo_estimado = data.tiempo_estimado_revision.strip()
+    trabajo_requerido = data.trabajo_requerido.strip()
+
+    if len(tiempo_estimado) < 2:
+        raise HTTPException(status_code=400, detail="Indica cuánto tiempo puede demorar el trabajo.")
+    if len(trabajo_requerido) < 5:
+        raise HTTPException(status_code=400, detail="Describe qué toca realizar después de la revisión.")
+
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            UPDATE citas c
+            SET tiempo_estimado_revision = %s,
+                trabajo_requerido = %s
+            FROM mecanicos m
+            WHERE c.id = %s
+              AND c.mecanico_id = %s
+              AND c.mecanico_id = m.id
+              AND c.estado = 'confirmada'
+              AND m.activo = TRUE
+            RETURNING c.id, c.tiempo_estimado_revision, c.trabajo_requerido
+            """,
+            (tiempo_estimado, trabajo_requerido, cita_id, mecanico_id),
+        )
+        revision = cur.fetchone()
+        if not revision:
+            raise HTTPException(status_code=404, detail="Cita confirmada no encontrada para este mecánico.")
+
+        conn.commit()
+        return dict(revision)
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al guardar la revisión del mecánico")
     finally:
         cur.close()
         conn.close()

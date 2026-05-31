@@ -35,6 +35,8 @@ CREATE TABLE public.citas (
     fecha_hora timestamp without time zone NOT NULL,
     estado character varying(20) DEFAULT 'pendiente'::character varying,
     notas text,
+    tiempo_estimado_revision character varying(100),
+    trabajo_requerido text,
     CONSTRAINT citas_estado_check CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'confirmada'::character varying, 'completada'::character varying, 'cancelada'::character varying])::text[])))
 );
 
@@ -187,7 +189,9 @@ CREATE TABLE public.talleres (
     direccion character varying(200) NOT NULL,
     telefono character varying(20),
     admin_id integer,
-    creado_en timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    creado_en timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    latitud numeric(10,7),
+    longitud numeric(10,7)
 );
 
 
@@ -494,4 +498,3 @@ ALTER TABLE ONLY public.vehiculos
 --
 
 \unrestrict D9rCZ1I7NKK6ZgYtlocyDZXtzUfMiqMh5dflo4BPiiW9wTyZBfFaDlASZRmdb5o
-

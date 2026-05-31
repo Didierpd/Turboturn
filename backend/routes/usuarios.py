@@ -101,7 +101,33 @@ def login(data: UsuarioLogin):
         usuario = cur.fetchone()
 
         if not usuario:
-            raise HTTPException(status_code=404, detail="El usuario no existe. Regístrate.")
+            # Evita una segunda petición desde el frontend cuando quien inicia sesión es un mecánico.
+            cur.execute(
+                """
+                SELECT m.id, m.taller_id, m.nombre, m.email, m.telefono, m.especialidad,
+                       m.activo, m.contrasena, t.nombre AS taller
+                FROM mecanicos m
+                JOIN talleres t ON m.taller_id = t.id
+                WHERE LOWER(m.email) = LOWER(%s)
+                """,
+                (data.email,),
+            )
+            mecanico = cur.fetchone()
+            if not mecanico:
+                raise HTTPException(status_code=404, detail="Correo o contraseña incorrectos.")
+            if not mecanico["activo"]:
+                raise HTTPException(status_code=403, detail="El mecánico está inactivo.")
+            if mecanico["contrasena"] != hashed:
+                raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
+
+            mecanico = dict(mecanico)
+            mecanico.pop("contrasena", None)
+            mecanico["rol"] = "mecanico"
+            return {
+                "mfa_requerido": False,
+                "mensaje": "Login exitoso.",
+                "usuario": mecanico,
+            }
 
         if usuario["contrasena"] != hashed:
             raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
