@@ -153,7 +153,26 @@ function activarFormularioCitas() {
   cargarTalleresEnSelect();
   cargarVehiculosEnSelect();
 
-  form.addEventListener("submit", async function (e) {
+  document.getElementById("taller").addEventListener("change", function() {
+    const tallerId = this.value;
+    const grupo = document.getElementById("servicioGroup");
+    const select = document.getElementById("servicio");
+    if (!tallerId) {
+      grupo.style.display = "none";
+      select.innerHTML = '<option value="">Revisión general (sin servicio específico)</option>';
+      return;
+    }
+    fetch("/api/servicios/taller/" + tallerId)
+      .then(r => r.json())
+      .then(servicios => {
+        grupo.style.display = "block";
+        select.innerHTML = '<option value="">Revisión general (sin servicio específico)</option>' +
+          servicios.map(s => '<option value="' + s.id + '">' + s.nombre + ' — $' + Number(s.precio).toLocaleString("es-CO") + '</option>').join("");
+      })
+      .catch(() => { grupo.style.display = "none"; });
+  });
+
+    form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -165,6 +184,7 @@ function activarFormularioCitas() {
       vehiculo_id: parseInt(document.getElementById("vehiculo").value),
       fecha_hora: document.getElementById("fecha").value,
       notas: document.getElementById("notas").value,
+      servicio_id: parseInt(document.getElementById("servicio").value) || null,
     };
 
     if (!datos.taller_id) {

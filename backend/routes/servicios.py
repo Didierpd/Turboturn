@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 import psycopg2.extras
 from database import get_connection
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 
@@ -21,7 +23,7 @@ def get_servicios_taller_usuario(usuario_id: int):
         taller_id = _get_taller_id(cur, usuario_id)
         cur.execute(
             """
-            SELECT id, taller_id, nombre, descripcion, precio
+            SELECT id, taller_id, nombre, descripcion, precio, tiempo_estimado
             FROM servicios
             WHERE taller_id = %s
             ORDER BY nombre
@@ -78,7 +80,7 @@ def get_servicios_taller(taller_id: int):
     try:
         cur.execute(
             """
-            SELECT id, taller_id, nombre, descripcion, precio
+            SELECT id, taller_id, nombre, descripcion, precio, tiempo_estimado
             FROM servicios
             WHERE taller_id = %s
             ORDER BY nombre
@@ -100,7 +102,7 @@ def get_servicios():
     try:
         cur.execute(
             """
-            SELECT id, taller_id, nombre, descripcion, precio
+            SELECT id, taller_id, nombre, descripcion, precio, tiempo_estimado
             FROM servicios
             ORDER BY nombre
             """
@@ -108,6 +110,35 @@ def get_servicios():
         return [dict(row) for row in cur.fetchall()]
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener servicios")
+    finally:
+        cur.close()
+        conn.close()
+
+class ServicioData(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+    precio: float
+    tiempo_estimado: Optional[str] = None
+    usuario_id: int
+
+@router.post("/", summary="Crear servicio para un taller")
+def create_servicio(data: ServicioData):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        taller_id = _get_taller_id(cur, data.usuario_id)
+        cur.execute(
+            """INSERT INTO servicios (taller_id, nombre, descripcion, precio, tiempo_estimado)
+               VALUES (%s, %s, %s, %s, %s) RETURNING *""",
+            (taller_id, data.nombre, data.descripcion, data.precio, data.tiempo_estimado),
+        )
+        conn.commit()
+        return dict(cur.fetchone())
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al crear servicio: {str(e)}")
     finally:
         cur.close()
         conn.close()

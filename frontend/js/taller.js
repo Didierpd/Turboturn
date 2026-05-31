@@ -225,6 +225,7 @@ async function cargarServiciosTaller() {
         <td>${s.nombre}</td>
         <td>${s.descripcion || "-"}</td>
         <td>$${Number(s.precio).toLocaleString("es-CO")}</td>
+        <td>${s.tiempo_estimado || "-"}</td>
         <td>
           <button onclick="eliminarServicio(${s.id})" class="btn-submit" style="background:#dc2626;padding:6px 10px;border-radius:8px;font-size:0.8rem;">
             Eliminar
@@ -389,6 +390,44 @@ async function eliminarMecanico(id) {
   } catch (err) {
     alert("Error al eliminar mecánico.");
   }
+}
+
+function activarFormularioServicios() {
+  const form = document.getElementById("servicioForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const usuario = usuarioTaller();
+    const datos = {
+      nombre: document.getElementById("servicioNombre").value.trim(),
+      descripcion: document.getElementById("servicioDescripcion").value.trim() || null,
+      precio: parseFloat(document.getElementById("servicioPrecio").value),
+      tiempo_estimado: document.getElementById("servicioTiempo").value.trim() || null,
+      usuario_id: usuario.id,
+    };
+
+    try {
+      const res = await fetch("/api/servicios/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        mostrarMensaje("servicioAlert", err.detail || "Error al agregar servicio.", "error");
+        return;
+      }
+
+      mostrarMensaje("servicioAlert", "Servicio agregado correctamente.", "success");
+      form.reset();
+      cargarServiciosTaller();
+    } catch (err) {
+      mostrarMensaje("servicioAlert", "No se pudo conectar con el servidor.", "error");
+    }
+  });
 }
 
 async function eliminarServicio(id) {

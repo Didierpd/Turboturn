@@ -64,7 +64,12 @@
 
         localStorage.setItem("usuario", JSON.stringify(data.usuario));
         mostrarMensaje("mfaAlert", "Verificación exitosa. Redirigiendo...", "success");
-        setTimeout(() => { window.location.href = "./pantalladeInicio.html"; }, 1500);
+        const rol = data.usuario.rol;
+        setTimeout(() => {
+          if (rol === "taller") window.location.href = "./panel-taller.html";
+          else if (rol === "admin") window.location.href = "./panel-admin.html";
+          else window.location.href = "./pantalladeInicio.html";
+        }, 1500);
       } catch (err) {
         mostrarMensaje("mfaAlert", "No se pudo conectar con el servidor.", "error");
       }

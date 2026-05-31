@@ -13,6 +13,7 @@ class CitaData(BaseModel):
     taller_id: int
     fecha_hora: str
     notas: Optional[str] = None
+    servicio_id: Optional[int] = None
 
 
 @router.get("/talleres-activos", summary="Listar talleres activos")
@@ -172,10 +173,27 @@ def create_cita(data: CitaData):
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cur.execute(
-            """INSERT INTO citas (usuario_id, vehiculo_id, taller_id, fecha_hora, notas)
-               VALUES (%s, %s, %s, %s, %s) RETURNING *""",
-            (data.usuario_id, data.vehiculo_id, data.taller_id, data.fecha_hora, data.notas),
+            """SELECT COUNT(*) as total FROM citas
+               WHERE taller_id = %s AND DATE(fecha_hora) = DATE(%s)""",
+            (data.taller_id, data.fecha_hora),
         )
+        if cur.fetchone()["total"] >= 10:
+            raise HTTPException(status_code=400, detail="Este taller ya tiene 10 citas reservadas para ese dia.")
+
+        cur.execute(
+            """SELECT COUNT(*) as total FROM citas
+               WHERE taller_id = %s AND fecha_hora = %s""",
+            (data.taller_id, data.fecha_hora),
+        )
+        if cur.fetchone()["total"] > 0:
+            raise HTTPException(status_code=400, detail="Ya hay una cita en ese taller para esa fecha y hora.")
+
+        cur.execute(
+            """INSERT INTO citas (usuario_id, vehiculo_id, taller_id, fecha_hora, notas, servicio_id)
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
+            (data.usuario_id, data.vehiculo_id, data.taller_id, data.fecha_hora, data.notas, data.servicio_id),
+        )
+
         conn.commit()
         return dict(cur.fetchone())
     except Exception:

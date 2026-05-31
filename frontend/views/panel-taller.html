@@ -172,6 +172,28 @@
       <div id="tab-servicios" class="tab-section" style="display:none;">
         <div class="card">
           <h2>Servicios del taller</h2>
+          <form id="servicioForm" style="margin-top:15px;">
+            <div class="grid">
+              <div class="form-group">
+                <label for="servicioNombre">Nombre del servicio</label>
+                <input type="text" id="servicioNombre" placeholder="Ej: Cambio de aceite" minlength="2" required />
+              </div>
+              <div class="form-group">
+                <label for="servicioDescripcion">Descripción</label>
+                <input type="text" id="servicioDescripcion" placeholder="Descripción opcional" />
+              </div>
+              <div class="form-group">
+                <label for="servicioPrecio">Precio ($)</label>
+                <input type="number" id="servicioPrecio" placeholder="Ej: 50000" min="0" step="100" required />
+              </div>
+              <div class="form-group">
+                <label for="servicioTiempo">Tiempo estimado</label>
+                <input type="text" id="servicioTiempo" placeholder="Ej: 1 hora, 30 min" />
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">Agregar servicio</button>
+          </form>
+          <div id="servicioAlert" class="alert" style="margin-top:12px;"></div>
           <div class="table-wrapper" style="margin-top:20px;">
             <table>
               <thead>
@@ -179,11 +201,12 @@
                   <th>Servicio</th>
                   <th>Descripción</th>
                   <th>Precio</th>
+                  <th>Tiempo estimado</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody id="serviciosTallerBody">
-                <tr><td colspan="4" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+                <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -230,6 +253,7 @@
 
     cargarAgendaHoy();
     activarFormularioMecanicos();
+    activarFormularioServicios();
   </script>
 </body>
 </html>

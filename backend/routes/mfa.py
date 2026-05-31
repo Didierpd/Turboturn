@@ -175,7 +175,7 @@ def validar_mfa(data: MFAValidarRequest):
             raise HTTPException(status_code=401, detail="Código MFA incorrecto o expirado.")
 
         cur.execute(
-            "SELECT id, nombre, email, telefono FROM usuarios WHERE id = %s",
+            "SELECT id, nombre, email, telefono, rol, mfa_habilitado FROM usuarios WHERE id = %s",
             (data.usuario_id,),
         )
         datos_usuario = dict(cur.fetchone())
