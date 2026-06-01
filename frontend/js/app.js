@@ -421,10 +421,18 @@ function activarFormularioRegistro() {
     if (rol === "taller") {
       datos.nombre_taller = document.getElementById("nombre_taller").value;
       datos.direccion_taller = document.getElementById("direccion_taller").value;
+      const lat = document.getElementById("latitud_taller").value;
+      const lng = document.getElementById("longitud_taller").value;
       if (!datos.nombre_taller || !datos.direccion_taller) {
         mostrarMensaje("registroAlert", "Ingresa el nombre y la dirección del taller.", "error");
         return;
       }
+      if (!lat || !lng) {
+        mostrarMensaje("registroAlert", "Ubica tu taller en el mapa antes de registrarte.", "error");
+        return;
+      }
+      datos.latitud = parseFloat(lat);
+      datos.longitud = parseFloat(lng);
     }
 
     try {

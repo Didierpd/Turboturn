@@ -76,6 +76,9 @@ function botonesAccion(cita) {
   if (cita.estado !== "cancelada" && cita.estado !== "completada") {
     btns += `<button onclick="cambiarEstadoCita(${cita.id},'cancelada')" class="btn-submit" style="background:#dc2626;padding:6px 10px;border-radius:8px;font-size:0.8rem;">Cancelar</button>`;
   }
+  if (cita.estado === "completada") {
+    btns += `<button onclick="enviarFactura(${cita.id})" class="btn-submit" style="background:#0f766e;padding:6px 10px;border-radius:8px;font-size:0.8rem;">Enviar Factura</button>`;
+  }
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;">${btns}</div>`;
 }
 
@@ -503,5 +506,20 @@ async function eliminarServicio(id) {
     cargarServiciosTaller();
   } catch (err) {
     alert("Error al eliminar servicio.");
+  }
+}
+
+async function enviarFactura(citaId) {
+  if (!confirm("¿Enviar la factura al cliente por correo?")) return;
+  try {
+    const res = await fetch(`/api/citas/${citaId}/factura`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      alert("Factura enviada correctamente al cliente.");
+    } else {
+      alert(data.detail || "Error al enviar la factura.");
+    }
+  } catch (err) {
+    alert("Error al enviar la factura.");
   }
 }

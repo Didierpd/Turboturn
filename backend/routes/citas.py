@@ -8,6 +8,7 @@ from email_utils import (
     enviar_correo_cita_confirmada,
     enviar_correo_cita_creada,
     enviar_correo_mecanico_asignado,
+    enviar_factura_pdf,
 )
 
 router = APIRouter()
@@ -336,6 +337,46 @@ def create_cita(data: CitaData):
     except Exception:
         conn.rollback()
         raise HTTPException(status_code=500, detail="Error al crear cita")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.post("/{cita_id}/factura", summary="Generar y enviar factura PDF al cliente")
+def enviar_factura(cita_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT c.id, c.fecha_hora, c.notas,
+                   u.nombre AS cliente_nombre, u.email AS cliente_email,
+                   v.marca, v.placa, v.tipo_vehiculo,
+                   t.nombre AS taller_nombre, t.direccion AS taller_direccion,
+                   t.telefono AS taller_telefono,
+                   ut.email AS taller_email,
+                   s.nombre AS servicio_nombre, s.precio AS servicio_precio
+            FROM citas c
+            JOIN usuarios u ON c.usuario_id = u.id
+            JOIN vehiculos v ON c.vehiculo_id = v.id
+            JOIN talleres t ON c.taller_id = t.id
+            JOIN usuarios ut ON t.admin_id = ut.id
+            LEFT JOIN servicios s ON c.servicio_id = s.id
+            WHERE c.id = %s
+            """,
+            (cita_id,),
+        )
+        datos = cur.fetchone()
+        if not datos:
+            raise HTTPException(status_code=404, detail="Cita no encontrada")
+
+        datos = dict(datos)
+        enviar_factura_pdf(datos)
+        return {"mensaje": "Factura enviada correctamente al cliente."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al enviar factura: {str(e)}")
     finally:
         cur.close()
         conn.close()

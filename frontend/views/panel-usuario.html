@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Usuario - TurboTurn</title>
   <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #mapaPanel { height: 320px; border-radius: 10px; z-index: 0; }
+  </style>
 </head>
 <body>
   <div class="page">
@@ -16,6 +20,7 @@
         <a href="./citas.html">Reservar cita</a>
         <a href="./vehiculos.html">Mis vehículos</a>
         <a href="./servicios.html">Servicios</a>
+        <a href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
@@ -61,6 +66,12 @@
         </a>
       </div>
  
+      <div class="card" style="margin-top:20px;">
+        <h2>Talleres activos cerca de ti</h2>
+        <p id="mapaPanelEstado" style="color:#64748b; margin-bottom:10px;">Cargando talleres...</p>
+        <div id="mapaPanel"></div>
+      </div>
+
       <!-- ══════════════════════════════════════════ -->
       <!--         SECCIÓN MFA                        -->
       <!-- ══════════════════════════════════════════ -->
@@ -224,6 +235,7 @@
     </footer>
   </div>
  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/app.js?v=10"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -359,6 +371,39 @@
     });
  
     cargarEstadoMFA();
+
+    // ── Mapa de talleres en el panel ──
+    async function cargarMapaPanel() {
+      const mapa = L.map("mapaPanel").setView([4.6500, -74.0900], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19, attribution: "&copy; OpenStreetMap"
+      }).addTo(mapa);
+
+      try {
+        const res = await fetch("/api/citas/talleres-activos");
+        const talleres = await res.json();
+        const conCoordenadas = talleres.filter(t => t.latitud && t.longitud);
+
+        if (conCoordenadas.length === 0) {
+          document.getElementById("mapaPanelEstado").textContent = "No hay talleres con ubicación registrada aún.";
+          return;
+        }
+
+        const marcadores = conCoordenadas.map(t => {
+          return L.marker([Number(t.latitud), Number(t.longitud)])
+            .addTo(mapa)
+            .bindPopup(`<strong>${t.nombre}</strong><br>${t.direccion || ""}<br>${t.telefono || ""}`);
+        });
+
+        const grupo = L.featureGroup(marcadores);
+        mapa.fitBounds(grupo.getBounds().pad(0.2));
+        document.getElementById("mapaPanelEstado").textContent = `${conCoordenadas.length} talleres activos en el mapa`;
+      } catch {
+        document.getElementById("mapaPanelEstado").textContent = "Error al cargar los talleres.";
+      }
+    }
+
+    cargarMapaPanel();
   </script>
 </body>
 </html>

@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Registro - TurboTurn</title>
   <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #mapaRegistro { height: 280px; border-radius: 10px; margin-top: 10px; z-index: 0; }
+    .btn-buscar-mapa { background:#1d4ed8; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; margin-top:8px; }
+    .btn-buscar-mapa:hover { background:#1e40af; }
+    #coordenadasInfo { font-size:0.82rem; color:#64748b; margin-top:6px; }
+  </style>
 </head>
 <body>
   <div class="page">
@@ -70,6 +77,16 @@
             <div class="form-group">
               <label for="direccion_taller">Dirección</label>
               <input type="text" id="direccion_taller" placeholder="Ej: Calle 80 #45-12, Bogotá" minlength="5" />
+              <button type="button" class="btn-buscar-mapa" onclick="buscarDireccionEnMapa()">Buscar en mapa</button>
+            </div>
+
+            <div class="form-group">
+              <label>Ubica tu taller en el mapa</label>
+              <p style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Busca tu dirección o haz click en el mapa para marcar la ubicación exacta.</p>
+              <div id="mapaRegistro"></div>
+              <p id="coordenadasInfo">Sin ubicación seleccionada.</p>
+              <input type="hidden" id="latitud_taller" />
+              <input type="hidden" id="longitud_taller" />
             </div>
 
             <div style="padding:12px; background:#fef3c7; border-left:4px solid #f59e0b; border-radius:8px; color:#92400e; font-size:0.9rem; margin-bottom:16px;">
@@ -122,6 +139,59 @@
     </footer>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/app.js?v=10"></script>
+  <script>
+    let mapaReg = null;
+    let marcadorReg = null;
+
+    function iniciarMapaRegistro() {
+      if (mapaReg) return;
+      mapaReg = L.map("mapaRegistro").setView([4.6500, -74.0900], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19, attribution: "&copy; OpenStreetMap"
+      }).addTo(mapaReg);
+
+      mapaReg.on("click", function(e) {
+        colocarMarcador(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    function colocarMarcador(lat, lng) {
+      if (marcadorReg) mapaReg.removeLayer(marcadorReg);
+      marcadorReg = L.marker([lat, lng], { draggable: true }).addTo(mapaReg);
+      marcadorReg.on("dragend", function(e) {
+        const pos = e.target.getLatLng();
+        actualizarCoordenadas(pos.lat, pos.lng);
+      });
+      actualizarCoordenadas(lat, lng);
+    }
+
+    function actualizarCoordenadas(lat, lng) {
+      document.getElementById("latitud_taller").value = lat;
+      document.getElementById("longitud_taller").value = lng;
+      document.getElementById("coordenadasInfo").textContent = `Ubicación: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+
+    async function buscarDireccionEnMapa() {
+      const dir = document.getElementById("direccion_taller").value.trim();
+      if (!dir) { alert("Escribe una dirección primero."); return; }
+      iniciarMapaRegistro();
+      const query = encodeURIComponent(dir + ", Bogotá, Colombia");
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`);
+      const data = await res.json();
+      if (data.length === 0) { alert("No se encontró la dirección. Haz click en el mapa para ubicar manualmente."); return; }
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      mapaReg.setView([lat, lng], 17);
+      colocarMarcador(lat, lng);
+    }
+
+    document.getElementById("rol").addEventListener("change", function() {
+      if (this.value === "taller") {
+        setTimeout(iniciarMapaRegistro, 100);
+      }
+    });
+  </script>
 </body>
 </html>

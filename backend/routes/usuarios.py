@@ -35,6 +35,8 @@ class UsuarioRegistro(BaseModel):
     rol: Optional[str] = "usuario"
     nombre_taller: Optional[str] = None
     direccion_taller: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
 
 class UsuarioLogin(BaseModel):
     email: EmailStr
@@ -66,6 +68,8 @@ def registro(data: UsuarioRegistro):
             "rol": data.rol,
             "nombre_taller": data.nombre_taller,
             "direccion_taller": data.direccion_taller,
+            "latitud": data.latitud,
+            "longitud": data.longitud,
         }
         codigo = generar_codigo()
         cur.execute(
@@ -98,7 +102,7 @@ def login(data: UsuarioLogin):
     try:
         hashed = _hash_password(data.password)
         cur.execute(
-            "SELECT id, nombre, email, telefono, rol, mfa_habilitado, contrasena FROM usuarios WHERE email = %s",
+            "SELECT id, nombre, email, telefono, rol, estado, mfa_habilitado, contrasena FROM usuarios WHERE email = %s",
             (data.email,),
         )
         usuario = cur.fetchone()
@@ -140,6 +144,9 @@ def login(data: UsuarioLogin):
                 "mensaje": "Login exitoso.",
                 "usuario": mecanico,
             }
+
+        if usuario["estado"] != "activo":
+            raise HTTPException(status_code=403, detail="Tu cuenta está restringida o pendiente de aprobación.")
 
         if usuario["contrasena"] != hashed:
             raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
@@ -231,6 +238,54 @@ def rechazar_taller(usuario_id: int):
         conn.close()
 
 
+@router.put("/{usuario_id}/activar", summary="Activar usuario")
+def activar_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE usuarios SET estado = 'activo' WHERE id = %s", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Usuario activado."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{usuario_id}/restringir", summary="Restringir usuario")
+def restringir_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE usuarios SET estado = 'pendiente' WHERE id = %s", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Usuario restringido."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.delete("/{usuario_id}/eliminar", summary="Eliminar usuario")
+def eliminar_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM usuarios WHERE id = %s", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Usuario eliminado."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
 class VerificarCodigoRequest(BaseModel):
     email: EmailStr
     codigo: str
@@ -278,10 +333,10 @@ def verificar_codigo(data: VerificarCodigoRequest):
         if datos.get("rol") == "taller" and datos.get("nombre_taller") and datos.get("direccion_taller"):
             cur.execute(
                 """
-                INSERT INTO talleres (nombre, direccion, admin_id)
-                VALUES (%s, %s, %s)
+                INSERT INTO talleres (nombre, direccion, admin_id, latitud, longitud)
+                VALUES (%s, %s, %s, %s, %s)
                 """,
-                (datos["nombre_taller"], datos["direccion_taller"], nuevo["id"]),
+                (datos["nombre_taller"], datos["direccion_taller"], nuevo["id"], datos.get("latitud"), datos.get("longitud")),
             )
 
         cur.execute("UPDATE codigos_verificacion SET usado = TRUE WHERE id = %s", (row["id"],))
