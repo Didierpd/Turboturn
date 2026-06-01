@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Admin - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="stylesheet" href="../styles/main.css?v=17" />
 </head>
 <body>
   <div class="page">
@@ -35,6 +35,24 @@
           <div class="info-box" style="cursor:pointer;" onclick="mostrarTab('usuarios')">
             <h3>Gestión de usuarios</h3>
             <p>Consulta todos los usuarios registrados en la plataforma.</p>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="chart-card">
+            <h3>Citas por estado</h3>
+            <div id="adminCitasEstadoChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Servicios más solicitados</h3>
+            <div id="adminServiciosChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Talleres con más citas</h3>
+            <div id="adminTalleresChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Clientes registrados por mes</h3>
+            <div id="adminClientesMesChart" class="bar-chart"><p>Cargando...</p></div>
           </div>
         </div>
       </div>
@@ -124,7 +142,7 @@
   </div>
 
   <script src="../js/app.js?v=10"></script>
-  <script src="../js/admin.js?v=10"></script>
+  <script src="../js/admin.js?v=11"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "admin") { window.location.href = "./login.html"; }
@@ -142,6 +160,7 @@
       document.getElementById("tab-" + tab).style.display = "block";
       document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add("active");
 
+      if (tab === "dashboard") cargarEstadisticasAdmin();
       if (tab === "pendientes") cargarTalleresPendientes();
       if (tab === "usuarios") cargarTodosUsuarios();
     }
@@ -152,6 +171,8 @@
         mostrarTab(this.dataset.tab);
       });
     });
+
+    cargarEstadisticasAdmin();
   </script>
 </body>
 </html>
