@@ -41,7 +41,7 @@ def _get_connection_pool():
     if _connection_pool is None:
         with _pool_lock:
             if _connection_pool is None:
-                _connection_pool = pool.ThreadedConnectionPool(1, 10, **DB_CONFIG)
+                _connection_pool = pool.ThreadedConnectionPool(5, 50, **DB_CONFIG)
     return _connection_pool
 
 
