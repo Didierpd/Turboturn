@@ -2,13 +2,17 @@ import psycopg2
 import psycopg2.extras
 from psycopg2 import pool
 import threading
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_CONFIG = {
-    "host": "turboturb-db.cd6wwa42q63k.us-east-2.rds.amazonaws.com",
-    "database": "postgres",
-    "user": "postgres",
-    "password": "Turboturn2026*",
-    "port": 5432,
+    "host": os.getenv("DB_HOST"),
+    "database": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "port": int(os.getenv("DB_PORT", 5432)),
     "connect_timeout": 5,
 }
 
