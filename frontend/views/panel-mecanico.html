@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Mecánico - TurboTurn</title>
+  <link rel="stylesheet" href="../styles/main.css?v=15" />
+</head>
+<body>
+  <div class="page">
+    <div class="navbar">
+      <h2>TurboTurn - Mecánico</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
+      <div class="nav-links">
+        <a class="active" href="./panel-mecanico.html">Trabajos</a>
+        <a href="#" id="btnSalir">Salir</a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="card">
+        <h1 id="bienvenida">Panel del mecánico</h1>
+        <p id="tallerNombre" style="color:#64748b;"></p>
+      </div>
+
+      <div class="grid" style="margin-bottom:20px;">
+        <div class="info-box">
+          <h3>Asignadas</h3>
+          <p id="trabajosAsignados" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
+        </div>
+        <div class="info-box">
+          <h3>Pendientes</h3>
+          <p id="trabajosPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
+        </div>
+        <div class="info-box">
+          <h3>Terminadas</h3>
+          <p id="trabajosTerminados" style="font-size:2rem;font-weight:bold;color:#16a34a;">-</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Seguridad - Verificación en dos pasos</h2>
+        <p style="color:#64748b;margin-bottom:16px;">
+          Activa Google Authenticator para proteger el acceso al panel del mecánico.
+        </p>
+        <div id="mfaEstadoMecanico" style="margin-bottom:16px;">
+          <span id="mfaBadgeMecanico" class="badge">Consultando...</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button id="btnActivarMFAMecanico" class="btn-submit" style="display:none;background:#16a34a;">Activar MFA</button>
+          <button id="btnDesactivarMFAMecanico" class="btn-submit" style="display:none;background:#dc2626;">Desactivar MFA</button>
+        </div>
+        <div id="mfaQRSectionMecanico" style="display:none;margin-top:20px;">
+          <h3>Escanea el código QR</h3>
+          <p style="color:#64748b;">Abre Google Authenticator y escanea este código.</p>
+          <div style="text-align:center;margin:16px 0;">
+            <img id="mfaQRImgMecanico" src="" alt="Código QR MFA" style="width:200px;height:200px;border:4px solid #0f766e;border-radius:12px;" />
+          </div>
+          <p style="color:#64748b;font-size:.9rem;">Código manual:</p>
+          <div id="mfaSecretTextMecanico" style="background:#f1f5f9;padding:10px 16px;border-radius:8px;font-family:monospace;letter-spacing:3px;text-align:center;margin-bottom:16px;">-</div>
+          <form id="mfaVerificarFormMecanico" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+              <input type="text" id="codigoActivacionMecanico" maxlength="6" placeholder="123456" style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+            </div>
+            <button type="submit" class="btn-submit">Confirmar y activar</button>
+          </form>
+          <div id="mfaActivarAlertMecanico" class="alert" style="margin-top:12px;"></div>
+        </div>
+        <div id="mfaDesactivarSectionMecanico" style="display:none;margin-top:20px;">
+          <h3>Desactivar MFA</h3>
+          <form id="mfaDesactivarFormMecanico" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+              <input type="text" id="codigoDesactivarMecanico" maxlength="6" placeholder="123456" style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+            </div>
+            <button type="submit" class="btn-submit" style="background:#dc2626;">Confirmar y desactivar</button>
+          </form>
+          <div id="mfaDesactivarAlertMecanico" class="alert" style="margin-top:12px;"></div>
+        </div>
+        <div id="mfaAlertMecanico" class="alert" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Mis trabajos asignados</h2>
+        <div class="table-wrapper" style="margin-top:15px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Cliente</th>
+                <th>Vehículo</th>
+                <th>Notas</th>
+                <th>Revisión</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="trabajosBody">
+              <tr><td colspan="7" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Apartado para que el mecánico deje el diagnóstico después de revisar el vehículo. -->
+      <div class="card" id="revisionTrabajoCard" style="display:none;">
+        <h2>Revisión del vehículo</h2>
+        <form id="revisionTrabajoForm">
+          <input type="hidden" id="revisionCitaId" />
+          <div class="form-group">
+            <label for="tiempoEstimadoRevision">Tiempo estimado</label>
+            <input type="text" id="tiempoEstimadoRevision" placeholder="Ej: 2 horas, 1 día, 3 días" required />
+          </div>
+          <div class="form-group">
+            <label for="trabajoRequerido">Qué toca realizar</label>
+            <textarea id="trabajoRequerido" rows="4" placeholder="Describe las reparaciones, repuestos o pasos necesarios..." required></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="submit" class="btn-submit">Guardar revisión</button>
+            <button type="button" class="btn-submit" onclick="cerrarFormularioRevision()" style="background:#64748b;">Cancelar</button>
+          </div>
+        </form>
+        <div id="revisionTrabajoAlert" class="alert" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card" id="finalizarTrabajoCard" style="display:none;">
+        <h2>Finalizar trabajo</h2>
+        <form id="finalizarTrabajoForm">
+          <input type="hidden" id="finalizarCitaId" />
+          <div class="form-group">
+            <label for="servicioRealizado">Servicio realizado</label>
+            <select id="servicioRealizado" required>
+              <option value="">Selecciona un servicio</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="costoFinal">Costo final</label>
+            <input type="number" id="costoFinal" min="0" step="100" placeholder="Costo final del servicio" required />
+          </div>
+          <div class="form-group">
+            <label for="observacionesFinales">Observaciones</label>
+            <textarea id="observacionesFinales" rows="3" placeholder="Describe el trabajo realizado..."></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="submit" class="btn-submit">Guardar en historial</button>
+            <button type="button" class="btn-submit" onclick="cerrarFormularioFinalizacion()" style="background:#64748b;">Cancelar</button>
+          </div>
+        </form>
+        <div id="finalizarTrabajoAlert" class="alert" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <footer class="app-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <img src="../images/logo_turbo.png" alt="TurboTurn" class="footer-logo" />
+            <div>
+              <strong>TurboTurn</strong>
+              <span>Gestión de turnos para talleres mecánicos</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>Línea de atención</h3>
+          <p><strong>3202936515</strong></p>
+          <p>Lunes a sábado · 8:00 a.m. - 6:00 p.m.</p>
+        </div>
+        <div>
+          <h3>Canales digitales</h3>
+          <p>turboturn365@gmail.com</p>
+          <p>WhatsApp: 3202936515</p>
+        </div>
+        <div>
+          <h3>Colaboradores</h3>
+          <p>Didier Perilla · 3115945009</p>
+          <p>perillabarajas.didier@gmail.com</p>
+          <p>Nicolas Moreno · 3106623025</p>
+          <p>nicolasmoreno@gmail.com</p>
+          <p>Paula Pinilla · 3204848264</p>
+          <p>paulapinilla@gmail.com</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="../js/app.js?v=10"></script>
+  <script src="../js/mecanico.js?v=10"></script>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (!usuario || usuario.rol !== "mecanico") { window.location.href = "./login.html"; }
+
+    document.getElementById("bienvenida").textContent = "Bienvenido, " + usuario.nombre;
+    document.getElementById("tallerNombre").textContent = usuario.taller ? "Taller: " + usuario.taller : "";
+
+    document.getElementById("btnSalir").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("usuario");
+      window.location.href = "./login.html";
+    });
+
+    async function cargarEstadoMFAMecanico() {
+      try {
+        const res = await fetch(`/api/mfa/estado/${usuario.id}?cuenta_tipo=mecanico`);
+        const data = await res.json();
+        const badge = document.getElementById("mfaBadgeMecanico");
+        const btnActivar = document.getElementById("btnActivarMFAMecanico");
+        const btnDesactivar = document.getElementById("btnDesactivarMFAMecanico");
+        if (data.mfa_habilitado) {
+          badge.textContent = "MFA Activo";
+          badge.className = "badge badge-completada";
+          btnActivar.style.display = "none";
+          btnDesactivar.style.display = "inline-flex";
+        } else {
+          badge.textContent = "MFA Inactivo";
+          badge.className = "badge badge-pendiente";
+          btnActivar.style.display = "inline-flex";
+          btnDesactivar.style.display = "none";
+        }
+      } catch (err) {
+        document.getElementById("mfaBadgeMecanico").textContent = "MFA no disponible";
+      }
+    }
+
+    document.getElementById("btnActivarMFAMecanico").addEventListener("click", async function() {
+      try {
+        const res = await fetch("/api/mfa/configurar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, cuenta_tipo: "mecanico" }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          mostrarMensaje("mfaAlertMecanico", data.detail || "Error al generar el QR.", "error");
+          return;
+        }
+        document.getElementById("mfaQRImgMecanico").src = `data:image/png;base64,${data.qr_base64}`;
+        document.getElementById("mfaSecretTextMecanico").textContent = data.secret;
+        document.getElementById("mfaQRSectionMecanico").style.display = "block";
+        document.getElementById("mfaDesactivarSectionMecanico").style.display = "none";
+      } catch (err) {
+        mostrarMensaje("mfaAlertMecanico", "Error al generar el QR.", "error");
+      }
+    });
+
+    document.getElementById("mfaVerificarFormMecanico").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigoActivacionMecanico").value.trim();
+      try {
+        const res = await fetch("/api/mfa/verificar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, cuenta_tipo: "mecanico", codigo }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          mostrarMensaje("mfaActivarAlertMecanico", data.detail || "Código incorrecto.", "error");
+          return;
+        }
+        mostrarMensaje("mfaActivarAlertMecanico", "MFA activado correctamente.", "success");
+        document.getElementById("mfaQRSectionMecanico").style.display = "none";
+        document.getElementById("codigoActivacionMecanico").value = "";
+        cargarEstadoMFAMecanico();
+      } catch (err) {
+        mostrarMensaje("mfaActivarAlertMecanico", "Error al activar MFA.", "error");
+      }
+    });
+
+    document.getElementById("btnDesactivarMFAMecanico").addEventListener("click", function() {
+      document.getElementById("mfaDesactivarSectionMecanico").style.display = "block";
+      document.getElementById("mfaQRSectionMecanico").style.display = "none";
+    });
+
+    document.getElementById("mfaDesactivarFormMecanico").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigoDesactivarMecanico").value.trim();
+      try {
+        const res = await fetch("/api/mfa/deshabilitar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, cuenta_tipo: "mecanico", codigo }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          mostrarMensaje("mfaDesactivarAlertMecanico", data.detail || "Código incorrecto.", "error");
+          return;
+        }
+        mostrarMensaje("mfaDesactivarAlertMecanico", "MFA desactivado correctamente.", "success");
+        document.getElementById("mfaDesactivarSectionMecanico").style.display = "none";
+        document.getElementById("codigoDesactivarMecanico").value = "";
+        cargarEstadoMFAMecanico();
+      } catch (err) {
+        mostrarMensaje("mfaDesactivarAlertMecanico", "Error al desactivar MFA.", "error");
+      }
+    });
+
+    cargarTrabajosMecanico();
+    activarFormularioRevision();
+    activarFormularioFinalizacion();
+    cargarEstadoMFAMecanico();
+  </script>
+</body>
+</html>

@@ -1,3 +1,32 @@
+function activarFetchSinCache() {
+  if (window.__turboTurnFetchSinCache) return;
+  window.__turboTurnFetchSinCache = true;
+
+  const fetchOriginal = window.fetch.bind(window);
+  window.fetch = function (resource, options = {}) {
+    const requestUrl = typeof resource === "string" ? resource : resource.url;
+    const esApiLocal = requestUrl && requestUrl.startsWith("/api/");
+    const method = (options.method || "GET").toUpperCase();
+
+    if (!esApiLocal) {
+      return fetchOriginal(resource, options);
+    }
+
+    const headers = new Headers(options.headers || {});
+    headers.set("Cache-Control", "no-cache");
+    headers.set("Pragma", "no-cache");
+
+    return fetchOriginal(resource, {
+      ...options,
+      cache: "no-store",
+      headers,
+      method,
+    });
+  };
+}
+
+activarFetchSinCache();
+
 function mostrarMensaje(id, mensaje, tipo = "success") {
   const alertBox = document.getElementById(id);
   if (!alertBox) return;
@@ -15,17 +44,24 @@ function activarFormularioLogin() {
   const form = document.getElementById("loginForm");
   if (!form) return;
 
+  // ── Fase 1: email + contraseña ──
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const email = document.getElementById("correo").value;
     const contrasena = document.getElementById("contrasena").value;
+    const submitBtn = form.querySelector("button[type='submit']");
+    const textoOriginal = submitBtn ? submitBtn.textContent : "";
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Ingresando...";
+    }
 
     try {
-      const res = await fetch("http://localhost:8000/api/usuarios/login", {
+      const res = await fetch("/api/usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, contrasena }),
+        body: JSON.stringify({ email, password: contrasena }),
       });
 
       if (!res.ok) {
@@ -34,21 +70,65 @@ function activarFormularioLogin() {
         return;
       }
 
-      const usuario = await res.json();
-      localStorage.setItem("usuario", JSON.stringify(usuario));
-      window.location.href = "./pantalladeInicio.html";
+      const data = await res.json();
+      if (data.mfa_requerido) {
+        const cuentaTipo = data.cuenta_tipo || "usuario";
+        window.location.href = `./mfa-login.html?usuario_id=${data.usuario_id}&cuenta_tipo=${cuentaTipo}`;
+        return;
+      }
+      localStorage.setItem("usuario", JSON.stringify(data.usuario));
+      window.location.href = "./pantalladeInicio.html?v=10";
 
     } catch (err) {
       mostrarMensaje("loginAlert", "No se pudo conectar con el servidor.", "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = textoOriginal;
+      }
     }
   });
+
+  // ── Fase 2: validar código MFA ──
+  const mfaForm = document.getElementById("mfaForm");
+  if (mfaForm) {
+    mfaForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const usuario_id = sessionStorage.getItem("mfa_usuario_id");
+      const codigo = document.getElementById("codigoMFA").value.trim();
+
+      try {
+        const res = await fetch("/api/mfa/validar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: parseInt(usuario_id), codigo }),
+        });
+
+        if (!res.ok) {
+          mostrarMensaje("mfaAlert", "Código incorrecto. Inténtalo de nuevo.", "error");
+          return;
+        }
+
+        // Código correcto → cargar datos del usuario y entrar
+        const userRes = await fetch(`/api/usuarios/${usuario_id}`);
+        const usuario = await userRes.json();
+        sessionStorage.removeItem("mfa_usuario_id");
+        localStorage.setItem("usuario", JSON.stringify(usuario));
+        window.location.href = "./pantalladeInicio.html?v=10";
+
+      } catch (err) {
+        mostrarMensaje("mfaAlert", "No se pudo conectar con el servidor.", "error");
+      }
+    });
+  }
 }
 
 async function cargarTalleresEnSelect() {
   const select = document.getElementById("taller");
   if (!select) return;
   try {
-    const res = await fetch("http://localhost:8000/api/citas/talleres-activos");
+    const res = await fetch("/api/citas/talleres-activos");
     const talleres = await res.json();
     if (talleres.length === 0) {
       select.innerHTML = `<option value="">No hay talleres disponibles</option>`;
@@ -69,7 +149,7 @@ async function cargarVehiculosEnSelect() {
   if (!usuario) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`);
+    const res = await fetch(`/api/vehiculos/${usuario.id}`);
     const vehiculos = await res.json();
     if (vehiculos.length === 0) {
       select.innerHTML = `<option value="">No tienes vehículos registrados</option>`;
@@ -86,10 +166,41 @@ function activarFormularioCitas() {
   const form = document.getElementById("citaForm");
   if (!form) return;
 
+  const fechaInput = document.getElementById("fecha");
+
+  fechaInput.addEventListener("invalid", function () {
+    if (!fechaInput.value) {
+      fechaInput.setCustomValidity("Selecciona o escribe la fecha y la hora completa.");
+    }
+  });
+
+  fechaInput.addEventListener("input", function () {
+    fechaInput.setCustomValidity("");
+  });
+
   cargarTalleresEnSelect();
   cargarVehiculosEnSelect();
 
-  form.addEventListener("submit", async function (e) {
+  document.getElementById("taller").addEventListener("change", function() {
+    const tallerId = this.value;
+    const grupo = document.getElementById("servicioGroup");
+    const select = document.getElementById("servicio");
+    if (!tallerId) {
+      grupo.style.display = "none";
+      select.innerHTML = '<option value="">Revisión general (sin servicio específico)</option>';
+      return;
+    }
+    fetch("/api/servicios/taller/" + tallerId)
+      .then(r => r.json())
+      .then(servicios => {
+        grupo.style.display = "block";
+        select.innerHTML = '<option value="">Revisión general (sin servicio específico)</option>' +
+          servicios.map(s => '<option value="' + s.id + '">' + s.nombre + ' — $' + Number(s.precio).toLocaleString("es-CO") + '</option>').join("");
+      })
+      .catch(() => { grupo.style.display = "none"; });
+  });
+
+    form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -101,6 +212,7 @@ function activarFormularioCitas() {
       vehiculo_id: parseInt(document.getElementById("vehiculo").value),
       fecha_hora: document.getElementById("fecha").value,
       notas: document.getElementById("notas").value,
+      servicio_id: parseInt(document.getElementById("servicio").value) || null,
     };
 
     if (!datos.taller_id) {
@@ -112,8 +224,13 @@ function activarFormularioCitas() {
       return;
     }
 
+    if (!document.getElementById("fecha").value) {
+      mostrarMensaje("citaAlert", "Selecciona o escribe la fecha y la hora completa.", "error");
+      return;
+    }
+
     try {
-      const res = await fetch("http://localhost:8000/api/citas/", {
+      const res = await fetch("/api/citas/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
@@ -141,7 +258,7 @@ async function cargarCitasUsuario() {
   if (!usuario) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/citas/${usuario.id}`);
+    const res = await fetch(`/api/citas/${usuario.id}`);
     const citas = await res.json();
 
     if (citas.length === 0) {
@@ -158,9 +275,12 @@ async function cargarCitasUsuario() {
 
     tbody.innerHTML = citas.map(c => `
       <tr>
-        <td>${new Date(c.fecha_hora).toLocaleString("es-CO")}</td>
+        <td>${new Date(c.fecha_hora).toLocaleString("es-CO", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })}</td>
         <td>${c.marca} (${c.placa})</td>
-        <td>Taller TurboTurn</td>
+        <td>${c.taller || "-"}</td>
         <td><span class="badge ${badgeClass[c.estado] || ''}">${c.estado}</span></td>
         <td>${c.notas || "-"}</td>
       </tr>
@@ -178,8 +298,13 @@ async function cargarVehiculos() {
   if (!tbody) return;
 
   try {
-    const res = await fetch(`http://localhost:8000/api/vehiculos/${usuario.id}`);
+    const res = await fetch(`/api/vehiculos/${usuario.id}`);
     const vehiculos = await res.json();
+
+    if (vehiculos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">No tienes vehículos registrados</td></tr>`;
+      return;
+    }
 
     tbody.innerHTML = vehiculos.map(v => `
       <tr>
@@ -188,10 +313,39 @@ async function cargarVehiculos() {
         <td>${v.anio}</td>
         <td>${v.placa}</td>
         <td>${v.color || "-"}</td>
+        <td>
+          <button onclick="eliminarVehiculo(${v.id})" class="btn-submit" style="background:#dc2626;padding:6px 10px;border-radius:8px;font-size:0.8rem;">
+            Eliminar
+          </button>
+        </td>
       </tr>
     `).join("");
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5">Error al cargar vehículos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">Error al cargar vehículos</td></tr>`;
+  }
+}
+
+async function eliminarVehiculo(id) {
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  if (!usuario) return;
+
+  if (!confirm("¿Eliminar este vehículo? Esta acción no se puede deshacer.")) return;
+
+  try {
+    const res = await fetch(`/api/vehiculos/${id}?usuario_id=${usuario.id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      mostrarMensaje("vehiculoAlert", err.detail || "Error al eliminar vehículo.", "error");
+      return;
+    }
+
+    mostrarMensaje("vehiculoAlert", "Vehículo eliminado correctamente.", "success");
+    cargarVehiculos();
+  } catch (err) {
+    mostrarMensaje("vehiculoAlert", "No se pudo conectar con el servidor.", "error");
   }
 }
 
@@ -215,7 +369,7 @@ function activarFormularioVehiculos() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/api/vehiculos/", {
+      const res = await fetch("/api/vehiculos/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
@@ -260,7 +414,7 @@ function activarFormularioRegistro() {
       nombre: document.getElementById("nombre").value,
       email: document.getElementById("email").value,
       telefono: document.getElementById("telefono").value,
-      contrasena: document.getElementById("contrasena").value,
+      password: document.getElementById("contrasena").value,
       rol,
     };
 
@@ -274,7 +428,7 @@ function activarFormularioRegistro() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/usuarios/registro", {
+      const res = await fetch("/api/usuarios/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
