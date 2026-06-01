@@ -298,4 +298,3 @@ def enviar_factura_pdf(datos: dict):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as servidor:
         servidor.login(EMAIL_ORIGEN, EMAIL_PASSWORD)
         servidor.sendmail(EMAIL_ORIGEN, datos["cliente_email"], mensaje.as_string())
->>>>>>> Stashed changes
