@@ -6,6 +6,7 @@ const badgeClass = {
 };
 
 let mecanicosCache = [];
+let serviciosTallerCache = [];
 
 function usuarioTaller() {
   return JSON.parse(localStorage.getItem("usuario"));
@@ -215,6 +216,7 @@ async function cargarServiciosTaller() {
     }
 
     const servicios = await res.json();
+    serviciosTallerCache = servicios;
     if (servicios.length === 0) {
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;">No hay servicios registrados</td></tr>`;
       return;
@@ -227,6 +229,9 @@ async function cargarServiciosTaller() {
         <td>$${Number(s.precio).toLocaleString("es-CO")}</td>
         <td>${s.tiempo_estimado || "-"}</td>
         <td>
+          <button onclick="editarServicio(${s.id})" class="btn-submit" style="background:#1d4ed8;padding:6px 10px;border-radius:8px;font-size:0.8rem;margin-right:6px;">
+            Editar
+          </button>
           <button onclick="eliminarServicio(${s.id})" class="btn-submit" style="background:#dc2626;padding:6px 10px;border-radius:8px;font-size:0.8rem;">
             Eliminar
           </button>
@@ -409,12 +414,18 @@ async function eliminarMecanico(id) {
 
 function activarFormularioServicios() {
   const form = document.getElementById("servicioForm");
+  const cancelarBtn = document.getElementById("servicioCancelarEdicionBtn");
   if (!form) return;
+
+  if (cancelarBtn) {
+    cancelarBtn.addEventListener("click", cancelarEdicionServicio);
+  }
 
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const usuario = usuarioTaller();
+    const servicioId = document.getElementById("servicioIdEditar").value;
     const datos = {
       nombre: document.getElementById("servicioNombre").value.trim(),
       descripcion: document.getElementById("servicioDescripcion").value.trim() || null,
@@ -424,8 +435,11 @@ function activarFormularioServicios() {
     };
 
     try {
-      const res = await fetch("/api/servicios/", {
-        method: "POST",
+      const url = servicioId
+        ? `/api/servicios/${servicioId}/taller-usuario/${usuario.id}`
+        : "/api/servicios/";
+      const res = await fetch(url, {
+        method: servicioId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
       });
@@ -436,13 +450,38 @@ function activarFormularioServicios() {
         return;
       }
 
-      mostrarMensaje("servicioAlert", "Servicio agregado correctamente.", "success");
-      form.reset();
+      mostrarMensaje("servicioAlert", servicioId ? "Servicio actualizado correctamente." : "Servicio agregado correctamente.", "success");
+      cancelarEdicionServicio();
       cargarServiciosTaller();
     } catch (err) {
       mostrarMensaje("servicioAlert", "No se pudo conectar con el servidor.", "error");
     }
   });
+}
+
+function editarServicio(id) {
+  const servicio = serviciosTallerCache.find(s => Number(s.id) === Number(id));
+  if (!servicio) return;
+
+  document.getElementById("servicioIdEditar").value = servicio.id;
+  document.getElementById("servicioNombre").value = servicio.nombre || "";
+  document.getElementById("servicioDescripcion").value = servicio.descripcion || "";
+  document.getElementById("servicioPrecio").value = Number(servicio.precio) || 0;
+  document.getElementById("servicioTiempo").value = servicio.tiempo_estimado || "";
+
+  document.getElementById("servicioSubmitBtn").textContent = "Guardar cambios";
+  document.getElementById("servicioCancelarEdicionBtn").style.display = "inline-flex";
+  document.getElementById("servicioForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cancelarEdicionServicio() {
+  const form = document.getElementById("servicioForm");
+  if (!form) return;
+
+  form.reset();
+  document.getElementById("servicioIdEditar").value = "";
+  document.getElementById("servicioSubmitBtn").textContent = "Agregar servicio";
+  document.getElementById("servicioCancelarEdicionBtn").style.display = "none";
 }
 
 async function eliminarServicio(id) {

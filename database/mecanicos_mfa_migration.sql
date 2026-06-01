@@ -1,0 +1,7 @@
+ALTER TABLE public.mecanicos
+ADD COLUMN IF NOT EXISTS mfa_secret TEXT,
+ADD COLUMN IF NOT EXISTS mfa_habilitado BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN IF NOT EXISTS mfa_verificado BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_mecanicos_mfa
+ON public.mecanicos (mfa_habilitado);

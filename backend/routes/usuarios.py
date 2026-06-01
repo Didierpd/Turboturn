@@ -53,6 +53,9 @@ def registro(data: UsuarioRegistro):
         cur.execute("SELECT id FROM usuarios WHERE email = %s", (data.email,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="El email ya está registrado.")
+        cur.execute("SELECT id FROM mecanicos WHERE LOWER(email) = LOWER(%s)", (data.email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="El email ya está registrado.")
 
         hashed = _hash_password(data.password)
         datos = {
@@ -105,7 +108,7 @@ def login(data: UsuarioLogin):
             cur.execute(
                 """
                 SELECT m.id, m.taller_id, m.nombre, m.email, m.telefono, m.especialidad,
-                       m.activo, m.contrasena, t.nombre AS taller
+                       m.activo, m.contrasena, m.mfa_habilitado, t.nombre AS taller
                 FROM mecanicos m
                 JOIN talleres t ON m.taller_id = t.id
                 WHERE LOWER(m.email) = LOWER(%s)
@@ -120,8 +123,17 @@ def login(data: UsuarioLogin):
             if mecanico["contrasena"] != hashed:
                 raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
 
+            if mecanico.get("mfa_habilitado"):
+                return {
+                    "mfa_requerido": True,
+                    "usuario_id": mecanico["id"],
+                    "cuenta_tipo": "mecanico",
+                    "mensaje": "Ingresa el código de Google Authenticator para continuar.",
+                }
+
             mecanico = dict(mecanico)
             mecanico.pop("contrasena", None)
+            mecanico.pop("mfa_habilitado", None)
             mecanico["rol"] = "mecanico"
             return {
                 "mfa_requerido": False,

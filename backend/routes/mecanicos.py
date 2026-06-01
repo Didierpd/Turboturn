@@ -89,6 +89,9 @@ def create_mecanico(usuario_id: int, data: MecanicoData):
         cur.execute("SELECT id FROM mecanicos WHERE LOWER(email) = LOWER(%s)", (data.email,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="Ya existe un mecánico con ese correo.")
+        cur.execute("SELECT id FROM usuarios WHERE LOWER(email) = LOWER(%s)", (data.email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="Ese correo ya está registrado en otra cuenta.")
 
         cur.execute(
             """
@@ -121,6 +124,16 @@ def update_mecanico(mecanico_id: int, usuario_id: int, data: MecanicoData):
     try:
         taller_id = _get_taller_id(cur, usuario_id)
         cur.execute(
+            "SELECT id FROM mecanicos WHERE LOWER(email) = LOWER(%s) AND id <> %s",
+            (data.email, mecanico_id),
+        )
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="Ya existe un mecánico con ese correo.")
+        cur.execute("SELECT id FROM usuarios WHERE LOWER(email) = LOWER(%s)", (data.email,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="Ese correo ya está registrado en otra cuenta.")
+
+        cur.execute(
             """
             UPDATE mecanicos
             SET nombre = %s, email = %s, telefono = %s, especialidad = %s
@@ -152,7 +165,7 @@ def login_mecanico(data: MecanicoLogin):
         cur.execute(
             """
             SELECT m.id, m.taller_id, m.nombre, m.email, m.telefono, m.especialidad,
-                   m.activo, m.contrasena, t.nombre AS taller
+                   m.activo, m.contrasena, m.mfa_habilitado, t.nombre AS taller
             FROM mecanicos m
             JOIN talleres t ON m.taller_id = t.id
             WHERE LOWER(m.email) = LOWER(%s)
@@ -167,10 +180,20 @@ def login_mecanico(data: MecanicoLogin):
         if mecanico["contrasena"] != _hash_password(data.password):
             raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
 
+        if mecanico.get("mfa_habilitado"):
+            return {
+                "mfa_requerido": True,
+                "usuario_id": mecanico["id"],
+                "cuenta_tipo": "mecanico",
+                "mensaje": "Ingresa el código de Google Authenticator para continuar.",
+            }
+
         mecanico = dict(mecanico)
         mecanico.pop("contrasena", None)
+        mecanico.pop("mfa_habilitado", None)
         mecanico["rol"] = "mecanico"
         return {
+            "mfa_requerido": False,
             "mensaje": "Login exitoso.",
             "usuario": mecanico,
         }

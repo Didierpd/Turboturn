@@ -25,31 +25,85 @@ router = APIRouter()
 
 class MFAConfigurarRequest(BaseModel):
     usuario_id: int
+    cuenta_tipo: str = "usuario"
 
 class MFAVerificarRequest(BaseModel):
     usuario_id: int
     codigo: str          # Código de 6 dígitos del Authenticator
+    cuenta_tipo: str = "usuario"
 
 class MFAValidarRequest(BaseModel):
     usuario_id: int
     codigo: str
+    cuenta_tipo: str = "usuario"
 
 class MFADeshabilitarRequest(BaseModel):
     usuario_id: int
     codigo: str          # Se exige un código válido para deshabilitar
+    cuenta_tipo: str = "usuario"
 
 
-def _get_usuario(cur, usuario_id: int) -> dict:
-    """Devuelve el usuario o lanza 404."""
-    cur.execute(
-        "SELECT id, nombre, email, mfa_secret, mfa_habilitado, mfa_verificado "
-        "FROM usuarios WHERE id = %s",
-        (usuario_id,),
-    )
+def _normalizar_tipo(cuenta_tipo: str) -> str:
+    if cuenta_tipo not in ("usuario", "mecanico"):
+        raise HTTPException(status_code=400, detail="Tipo de cuenta no válido.")
+    return cuenta_tipo
+
+
+def _get_cuenta(cur, usuario_id: int, cuenta_tipo: str) -> dict:
+    """Devuelve la cuenta de usuario o mecánico, o lanza 404."""
+    cuenta_tipo = _normalizar_tipo(cuenta_tipo)
+    if cuenta_tipo == "mecanico":
+        cur.execute(
+            """
+            SELECT m.id, m.taller_id, m.nombre, m.email, m.telefono, m.especialidad,
+                   m.activo, m.mfa_secret, m.mfa_habilitado, m.mfa_verificado,
+                   t.nombre AS taller
+            FROM mecanicos m
+            JOIN talleres t ON m.taller_id = t.id
+            WHERE m.id = %s
+            """,
+            (usuario_id,),
+        )
+    else:
+        cur.execute(
+            "SELECT id, nombre, email, telefono, rol, mfa_secret, mfa_habilitado, mfa_verificado "
+            "FROM usuarios WHERE id = %s",
+            (usuario_id,),
+        )
     row = cur.fetchone()
     if not row:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return dict(row)
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+    cuenta = dict(row)
+    cuenta["cuenta_tipo"] = cuenta_tipo
+    return cuenta
+
+
+def _tabla_mfa(cuenta_tipo: str) -> str:
+    return "mecanicos" if _normalizar_tipo(cuenta_tipo) == "mecanico" else "usuarios"
+
+
+def _respuesta_cuenta(cur, usuario_id: int, cuenta_tipo: str) -> dict:
+    cuenta_tipo = _normalizar_tipo(cuenta_tipo)
+    if cuenta_tipo == "mecanico":
+        cur.execute(
+            """
+            SELECT m.id, m.taller_id, m.nombre, m.email, m.telefono, m.especialidad,
+                   m.activo, m.mfa_habilitado, t.nombre AS taller
+            FROM mecanicos m
+            JOIN talleres t ON m.taller_id = t.id
+            WHERE m.id = %s
+            """,
+            (usuario_id,),
+        )
+        mecanico = dict(cur.fetchone())
+        mecanico["rol"] = "mecanico"
+        return mecanico
+
+    cur.execute(
+        "SELECT id, nombre, email, telefono, rol, mfa_habilitado FROM usuarios WHERE id = %s",
+        (usuario_id,),
+    )
+    return dict(cur.fetchone())
 
 
 def _generar_qr_base64(secret: str, email: str) -> str:
@@ -75,14 +129,15 @@ def configurar_mfa(data: MFAConfigurarRequest):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        usuario = _get_usuario(cur, data.usuario_id)
+        cuenta = _get_cuenta(cur, data.usuario_id, data.cuenta_tipo)
+        tabla = _tabla_mfa(data.cuenta_tipo)
 
         # Genera un nuevo secret (32 chars, base32)
         secret = pyotp.random_base32()
 
         cur.execute(
-            """
-            UPDATE usuarios
+            f"""
+            UPDATE {tabla}
                SET mfa_secret     = %s,
                    mfa_habilitado = FALSE,
                    mfa_verificado = FALSE
@@ -92,7 +147,7 @@ def configurar_mfa(data: MFAConfigurarRequest):
         )
         conn.commit()
 
-        qr_base64 = _generar_qr_base64(secret, usuario["email"])
+        qr_base64 = _generar_qr_base64(secret, cuenta["email"])
 
         return {
             "mensaje": "Escanea el QR con Google Authenticator y luego confirma con un código.",
@@ -119,23 +174,24 @@ def verificar_mfa(data: MFAVerificarRequest):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        usuario = _get_usuario(cur, data.usuario_id)
+        cuenta = _get_cuenta(cur, data.usuario_id, data.cuenta_tipo)
+        tabla = _tabla_mfa(data.cuenta_tipo)
 
-        if not usuario["mfa_secret"]:
+        if not cuenta["mfa_secret"]:
             raise HTTPException(
                 status_code=400,
                 detail="Primero debes iniciar la configuración MFA en /configurar"
             )
 
-        totp = pyotp.TOTP(usuario["mfa_secret"])
+        totp = pyotp.TOTP(cuenta["mfa_secret"])
 
         # valid_window=1 acepta el código del intervalo anterior y siguiente (±30 s)
         if not totp.verify(data.codigo, valid_window=1):
             raise HTTPException(status_code=400, detail="Código incorrecto. Intenta de nuevo.")
 
         cur.execute(
-            """
-            UPDATE usuarios
+            f"""
+            UPDATE {tabla}
                SET mfa_habilitado = TRUE,
                    mfa_verificado = TRUE
              WHERE id = %s
@@ -165,20 +221,16 @@ def validar_mfa(data: MFAValidarRequest):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        usuario = _get_usuario(cur, data.usuario_id)
+        cuenta = _get_cuenta(cur, data.usuario_id, data.cuenta_tipo)
 
-        if not usuario["mfa_habilitado"] or not usuario["mfa_secret"]:
+        if not cuenta["mfa_habilitado"] or not cuenta["mfa_secret"]:
             raise HTTPException(status_code=400, detail="Este usuario no tiene MFA habilitado.")
 
-        totp = pyotp.TOTP(usuario["mfa_secret"])
+        totp = pyotp.TOTP(cuenta["mfa_secret"])
         if not totp.verify(data.codigo, valid_window=1):
             raise HTTPException(status_code=401, detail="Código MFA incorrecto o expirado.")
 
-        cur.execute(
-            "SELECT id, nombre, email, telefono, rol, mfa_habilitado FROM usuarios WHERE id = %s",
-            (data.usuario_id,),
-        )
-        datos_usuario = dict(cur.fetchone())
+        datos_usuario = _respuesta_cuenta(cur, data.usuario_id, data.cuenta_tipo)
 
         return {"mensaje": "Código MFA válido. Acceso autorizado.", "usuario": datos_usuario}
 
@@ -200,18 +252,19 @@ def deshabilitar_mfa(data: MFADeshabilitarRequest):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        usuario = _get_usuario(cur, data.usuario_id)
+        cuenta = _get_cuenta(cur, data.usuario_id, data.cuenta_tipo)
+        tabla = _tabla_mfa(data.cuenta_tipo)
 
-        if not usuario["mfa_habilitado"] or not usuario["mfa_secret"]:
+        if not cuenta["mfa_habilitado"] or not cuenta["mfa_secret"]:
             raise HTTPException(status_code=400, detail="El usuario no tiene MFA habilitado.")
 
-        totp = pyotp.TOTP(usuario["mfa_secret"])
+        totp = pyotp.TOTP(cuenta["mfa_secret"])
         if not totp.verify(data.codigo, valid_window=1):
             raise HTTPException(status_code=401, detail="Código MFA incorrecto. No se puede deshabilitar.")
 
         cur.execute(
-            """
-            UPDATE usuarios
+            f"""
+            UPDATE {tabla}
                SET mfa_secret     = NULL,
                    mfa_habilitado = FALSE,
                    mfa_verificado = FALSE
@@ -233,17 +286,18 @@ def deshabilitar_mfa(data: MFADeshabilitarRequest):
         conn.close()
 
 
-@router.get("/estado/{usuario_id}", summary="Consulta el estado MFA de un usuario")
-def estado_mfa(usuario_id: int):
+@router.get("/estado/{usuario_id}", summary="Consulta el estado MFA de una cuenta")
+def estado_mfa(usuario_id: int, cuenta_tipo: str = "usuario"):
     """Devuelve si el usuario tiene MFA habilitado y verificado."""
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        usuario = _get_usuario(cur, usuario_id)
+        cuenta = _get_cuenta(cur, usuario_id, cuenta_tipo)
         return {
             "usuario_id": usuario_id,
-            "mfa_habilitado": usuario["mfa_habilitado"],
-            "mfa_verificado": usuario["mfa_verificado"],
+            "cuenta_tipo": cuenta_tipo,
+            "mfa_habilitado": cuenta["mfa_habilitado"],
+            "mfa_verificado": cuenta["mfa_verificado"],
         }
     except HTTPException:
         raise

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Verificación MFA - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=13" />
+  <link rel="stylesheet" href="../styles/main.css?v=15" />
 </head>
 <body>
   <div class="page">
@@ -74,6 +74,7 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const usuarioId = params.get("usuario_id");
+    const cuentaTipo = params.get("cuenta_tipo") || "usuario";
     if (!usuarioId) window.location.href = "./login.html";
 
     document.getElementById("mfaForm").addEventListener("submit", async function(e) {
@@ -84,7 +85,7 @@
         const res = await fetch("/api/mfa/validar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ usuario_id: parseInt(usuarioId), codigo })
+          body: JSON.stringify({ usuario_id: parseInt(usuarioId), codigo, cuenta_tipo: cuentaTipo })
         });
         const data = await res.json();
 
@@ -99,6 +100,7 @@
         setTimeout(() => {
           if (rol === "taller") window.location.href = "./panel-taller.html";
           else if (rol === "admin") window.location.href = "./panel-admin.html";
+          else if (rol === "mecanico") window.location.href = "./panel-mecanico.html";
           else window.location.href = "./pantalladeInicio.html?v=10";
         }, 1500);
       } catch (err) {

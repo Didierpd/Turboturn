@@ -35,6 +35,8 @@ def warm_database_connection():
         cur = conn.cursor()
         cur.execute("SELECT 1")
         cur.fetchone()
+    except Exception as exc:
+        print(f"TurboTurn: no se pudo precalentar la base de datos: {exc}")
     finally:
         if cur:
             cur.close()

@@ -72,7 +72,8 @@ function activarFormularioLogin() {
 
       const data = await res.json();
       if (data.mfa_requerido) {
-        window.location.href = `./mfa-login.html?usuario_id=${data.usuario_id}`;
+        const cuentaTipo = data.cuenta_tipo || "usuario";
+        window.location.href = `./mfa-login.html?usuario_id=${data.usuario_id}&cuenta_tipo=${cuentaTipo}`;
         return;
       }
       localStorage.setItem("usuario", JSON.stringify(data.usuario));

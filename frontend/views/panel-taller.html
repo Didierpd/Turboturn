@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Taller - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=13" />
+  <link rel="stylesheet" href="../styles/main.css?v=15" />
 </head>
 <body>
   <div class="page">
@@ -173,6 +173,7 @@
         <div class="card">
           <h2>Servicios del taller</h2>
           <form id="servicioForm" style="margin-top:15px;">
+            <input type="hidden" id="servicioIdEditar" />
             <div class="grid">
               <div class="form-group">
                 <label for="servicioNombre">Nombre del servicio</label>
@@ -191,7 +192,10 @@
                 <input type="text" id="servicioTiempo" placeholder="Ej: 1 hora, 30 min" />
               </div>
             </div>
-            <button type="submit" class="btn-submit">Agregar servicio</button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="submit" id="servicioSubmitBtn" class="btn-submit">Agregar servicio</button>
+              <button type="button" id="servicioCancelarEdicionBtn" class="btn-submit" style="display:none;background:#64748b;">Cancelar edición</button>
+            </div>
           </form>
           <div id="servicioAlert" class="alert" style="margin-top:12px;"></div>
           <div class="table-wrapper" style="margin-top:20px;">
@@ -250,7 +254,7 @@
   </div>
 
   <script src="../js/app.js?v=10"></script>
-  <script src="../js/taller.js?v=10"></script>
+  <script src="../js/taller.js?v=16"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "taller") { window.location.href = "./login.html"; }

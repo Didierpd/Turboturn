@@ -121,16 +121,32 @@ class ServicioData(BaseModel):
     tiempo_estimado: Optional[str] = None
     usuario_id: int
 
+
+def _validar_servicio(data: ServicioData):
+    nombre = data.nombre.strip()
+    if len(nombre) < 2:
+        raise HTTPException(status_code=400, detail="El nombre del servicio debe tener al menos 2 caracteres.")
+    if data.precio < 0:
+        raise HTTPException(status_code=400, detail="El precio no puede ser negativo.")
+    return {
+        "nombre": nombre,
+        "descripcion": data.descripcion.strip() if data.descripcion else None,
+        "precio": data.precio,
+        "tiempo_estimado": data.tiempo_estimado.strip() if data.tiempo_estimado else None,
+    }
+
+
 @router.post("/", summary="Crear servicio para un taller")
 def create_servicio(data: ServicioData):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
+        servicio = _validar_servicio(data)
         taller_id = _get_taller_id(cur, data.usuario_id)
         cur.execute(
             """INSERT INTO servicios (taller_id, nombre, descripcion, precio, tiempo_estimado)
                VALUES (%s, %s, %s, %s, %s) RETURNING *""",
-            (taller_id, data.nombre, data.descripcion, data.precio, data.tiempo_estimado),
+            (taller_id, servicio["nombre"], servicio["descripcion"], servicio["precio"], servicio["tiempo_estimado"]),
         )
         conn.commit()
         return dict(cur.fetchone())
@@ -139,6 +155,48 @@ def create_servicio(data: ServicioData):
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error al crear servicio: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/{servicio_id}/taller-usuario/{usuario_id}", summary="Actualizar servicio de un taller")
+def update_servicio_taller(servicio_id: int, usuario_id: int, data: ServicioData):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        servicio = _validar_servicio(data)
+        taller_id = _get_taller_id(cur, usuario_id)
+        cur.execute(
+            """
+            UPDATE servicios
+            SET nombre = %s,
+                descripcion = %s,
+                precio = %s,
+                tiempo_estimado = %s
+            WHERE id = %s AND taller_id = %s
+            RETURNING id, taller_id, nombre, descripcion, precio, tiempo_estimado
+            """,
+            (
+                servicio["nombre"],
+                servicio["descripcion"],
+                servicio["precio"],
+                servicio["tiempo_estimado"],
+                servicio_id,
+                taller_id,
+            ),
+        )
+        actualizado = cur.fetchone()
+        if not actualizado:
+            raise HTTPException(status_code=404, detail="Servicio no encontrado")
+
+        conn.commit()
+        return dict(actualizado)
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar servicio: {str(e)}")
     finally:
         cur.close()
         conn.close()
