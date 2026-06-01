@@ -3,7 +3,12 @@ from pydantic import BaseModel
 from typing import Optional
 import psycopg2.extras
 from database import get_connection
-from email_utils import enviar_correo_cancelacion_cita
+from email_utils import (
+    enviar_correo_cancelacion_cita,
+    enviar_correo_cita_confirmada,
+    enviar_correo_cita_creada,
+    enviar_correo_mecanico_asignado,
+)
 
 router = APIRouter()
 
@@ -107,6 +112,7 @@ def cambiar_estado_cita(
         raise HTTPException(status_code=400, detail="Indica el motivo de cancelación para notificar al cliente.")
 
     datos_cancelacion = None
+    datos_confirmacion = None
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
@@ -149,6 +155,26 @@ def cambiar_estado_cita(
                 raise HTTPException(status_code=400, detail="El mecánico no pertenece al taller de esta cita o está inactivo.")
 
             cur.execute(
+                """
+                SELECT c.id, c.fecha_hora,
+                       u.nombre AS cliente, u.email AS cliente_email,
+                       t.nombre AS taller,
+                       v.tipo_vehiculo, v.marca, v.placa,
+                       m.nombre AS mecanico, m.email AS mecanico_email
+                FROM citas c
+                JOIN usuarios u ON c.usuario_id = u.id
+                JOIN talleres t ON c.taller_id = t.id
+                JOIN vehiculos v ON c.vehiculo_id = v.id
+                JOIN mecanicos m ON m.id = %s
+                WHERE c.id = %s
+                """,
+                (mecanico_id, cita_id),
+            )
+            datos_confirmacion = cur.fetchone()
+            if not datos_confirmacion:
+                raise HTTPException(status_code=404, detail="Cita no encontrada")
+
+            cur.execute(
                 "UPDATE citas SET estado=%s, mecanico_id=%s WHERE id=%s RETURNING id",
                 (estado, mecanico_id, cita_id),
             )
@@ -162,6 +188,7 @@ def cambiar_estado_cita(
             raise HTTPException(status_code=404, detail="Cita no encontrada")
         conn.commit()
 
+        correo_enviado = None
         if estado == "cancelada" and datos_cancelacion:
             try:
                 enviar_correo_cancelacion_cita(
@@ -172,6 +199,7 @@ def cambiar_estado_cita(
                     vehiculo=f"{datos_cancelacion['tipo_vehiculo']} {datos_cancelacion['marca']} ({datos_cancelacion['placa']})",
                     motivo=motivo_cancelacion.strip(),
                 )
+                correo_enviado = True
             except Exception:
                 # La cita queda cancelada aunque el proveedor de correo falle.
                 return {
@@ -179,7 +207,31 @@ def cambiar_estado_cita(
                     "correo_enviado": False,
                 }
 
-        return {"mensaje": f"Cita actualizada a {estado}", "correo_enviado": estado == "cancelada"}
+        if estado == "confirmada" and datos_confirmacion:
+            correo_enviado = True
+            vehiculo = f"{datos_confirmacion['tipo_vehiculo']} {datos_confirmacion['marca']} ({datos_confirmacion['placa']})"
+            try:
+                enviar_correo_cita_confirmada(
+                    email_destino=datos_confirmacion["cliente_email"],
+                    cliente=datos_confirmacion["cliente"],
+                    taller=datos_confirmacion["taller"],
+                    fecha_hora=str(datos_confirmacion["fecha_hora"]),
+                    vehiculo=vehiculo,
+                    mecanico=datos_confirmacion["mecanico"],
+                )
+                if datos_confirmacion["mecanico_email"]:
+                    enviar_correo_mecanico_asignado(
+                        email_destino=datos_confirmacion["mecanico_email"],
+                        mecanico=datos_confirmacion["mecanico"],
+                        cliente=datos_confirmacion["cliente"],
+                        taller=datos_confirmacion["taller"],
+                        fecha_hora=str(datos_confirmacion["fecha_hora"]),
+                        vehiculo=vehiculo,
+                    )
+            except Exception:
+                correo_enviado = False
+
+        return {"mensaje": f"Cita actualizada a {estado}", "correo_enviado": correo_enviado}
     except HTTPException:
         raise
     except Exception:
@@ -219,6 +271,8 @@ def get_citas(usuario_id: int):
 def create_cita(data: CitaData):
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cita_creada = None
+    datos_correo = None
     try:
         cur.execute(
             """SELECT COUNT(*) as total FROM citas
@@ -241,9 +295,44 @@ def create_cita(data: CitaData):
                VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
             (data.usuario_id, data.vehiculo_id, data.taller_id, data.fecha_hora, data.notas, data.servicio_id),
         )
+        cita_creada = dict(cur.fetchone())
+
+        cur.execute(
+            """
+            SELECT c.fecha_hora,
+                   u.nombre AS cliente, u.email AS cliente_email,
+                   t.nombre AS taller,
+                   v.tipo_vehiculo, v.marca, v.placa
+            FROM citas c
+            JOIN usuarios u ON c.usuario_id = u.id
+            JOIN talleres t ON c.taller_id = t.id
+            JOIN vehiculos v ON c.vehiculo_id = v.id
+            WHERE c.id = %s
+            """,
+            (cita_creada["id"],),
+        )
+        datos_correo = cur.fetchone()
 
         conn.commit()
-        return dict(cur.fetchone())
+        correo_enviado = None
+        if datos_correo:
+            try:
+                enviar_correo_cita_creada(
+                    email_destino=datos_correo["cliente_email"],
+                    cliente=datos_correo["cliente"],
+                    taller=datos_correo["taller"],
+                    fecha_hora=str(datos_correo["fecha_hora"]),
+                    vehiculo=f"{datos_correo['tipo_vehiculo']} {datos_correo['marca']} ({datos_correo['placa']})",
+                )
+                correo_enviado = True
+            except Exception:
+                correo_enviado = False
+
+        cita_creada["correo_enviado"] = correo_enviado
+        return cita_creada
+    except HTTPException:
+        conn.rollback()
+        raise
     except Exception:
         conn.rollback()
         raise HTTPException(status_code=500, detail="Error al crear cita")

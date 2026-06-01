@@ -1,5 +1,7 @@
 const mecanicoBadgeClass = {
   pendiente: "badge-pendiente",
+  pendiente_revision: "badge-pendiente",
+  revision_hecha: "badge-confirmada",
   confirmada: "badge-confirmada",
   completada: "badge-completada",
   cancelada: "badge-pendiente"
@@ -42,18 +44,56 @@ function escaparHtml(valor) {
   }[caracter]));
 }
 
+function etapaTrabajo(cita) {
+  if (cita.estado === "completada") {
+    return {
+      clave: "completada",
+      texto: "Trabajo terminado",
+      detalle: "El servicio ya fue guardado en el historial del cliente.",
+    };
+  }
+
+  if (cita.estado === "cancelada") {
+    return {
+      clave: "cancelada",
+      texto: "Cancelada",
+      detalle: "La cita fue cancelada por el taller.",
+    };
+  }
+
+  if (cita.tiempo_estimado_revision || cita.trabajo_requerido) {
+    return {
+      clave: "revision_hecha",
+      texto: "Revisión hecha",
+      detalle: "Ya puedes finalizar el trabajo cuando el servicio esté completo.",
+    };
+  }
+
+  return {
+    clave: "pendiente_revision",
+    texto: "Pendiente de revisión",
+    detalle: "Primero registra el tiempo estimado y qué toca realizar.",
+  };
+}
+
 function botonTrabajo(cita) {
   if (cita.estado !== "confirmada") {
     return "-";
   }
 
+  const tieneRevision = Boolean(cita.tiempo_estimado_revision || cita.trabajo_requerido);
+
   return `
-    <button onclick="abrirFormularioRevision(${cita.id})" class="btn-submit" style="background:#1d4ed8;padding:6px 10px;border-radius:8px;font-size:0.8rem;">
-      Registrar revisión
-    </button>
-    <button onclick="abrirFormularioFinalizacion(${cita.id})" class="btn-submit" style="background:#16a34a;padding:6px 10px;border-radius:8px;font-size:0.8rem;">
-      Trabajo terminado
-    </button>
+    <div class="mechanic-actions">
+      <button onclick="abrirFormularioRevision(${cita.id})" class="btn-submit mechanic-action-primary">
+        ${tieneRevision ? "Editar revisión" : "Registrar revisión"}
+      </button>
+      ${tieneRevision ? `
+        <button onclick="abrirFormularioFinalizacion(${cita.id})" class="btn-submit mechanic-action-success">
+          Finalizar trabajo
+        </button>
+      ` : ""}
+    </div>
   `;
 }
 
@@ -73,11 +113,13 @@ function resumenRevision(cita) {
 
 function actualizarContadoresTrabajos(citas) {
   const asignadas = citas.length;
-  const pendientes = citas.filter(c => c.estado === "confirmada").length;
+  const pendientes = citas.filter(c => etapaTrabajo(c).clave === "pendiente_revision").length;
+  const revisadas = citas.filter(c => etapaTrabajo(c).clave === "revision_hecha").length;
   const terminadas = citas.filter(c => c.estado === "completada").length;
 
   document.getElementById("trabajosAsignados").textContent = asignadas;
   document.getElementById("trabajosPendientes").textContent = pendientes;
+  document.getElementById("trabajosRevisados").textContent = revisadas;
   document.getElementById("trabajosTerminados").textContent = terminadas;
 }
 
@@ -102,17 +144,23 @@ async function cargarTrabajosMecanico() {
       return;
     }
 
-    tbody.innerHTML = citas.map(c => `
+    tbody.innerHTML = citas.map(c => {
+      const etapa = etapaTrabajo(c);
+      return `
       <tr>
         <td>${formatoFechaTrabajo(c.fecha_hora)}</td>
-        <td>${c.cliente}</td>
-        <td>${c.tipo_vehiculo} ${c.marca} (${c.placa})</td>
-        <td>${c.notas || "-"}</td>
+        <td>${escaparHtml(c.cliente)}</td>
+        <td>${escaparHtml(c.tipo_vehiculo)} ${escaparHtml(c.marca)} (${escaparHtml(c.placa)})</td>
+        <td>${escaparHtml(c.notas || "-")}</td>
         <td>${resumenRevision(c)}</td>
-        <td><span class="badge ${mecanicoBadgeClass[c.estado] || ""}">${c.estado}</span></td>
+        <td>
+          <span class="badge ${mecanicoBadgeClass[etapa.clave] || ""}">${etapa.texto}</span>
+          <div class="mechanic-status-detail">${etapa.detalle}</div>
+        </td>
         <td>${botonTrabajo(c)}</td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="7">Error al cargar trabajos</td></tr>`;
   }
@@ -288,7 +336,12 @@ async function terminarTrabajo(citaId, datos) {
       return;
     }
 
-    alert("Servicio guardado en el historial del cliente.");
+    const data = await res.json();
+    if (data.correo_enviado === false) {
+      mostrarMensaje("finalizarTrabajoAlert", "Trabajo finalizado, pero no se pudo enviar el correo al cliente.", "error");
+    } else {
+      mostrarMensaje("finalizarTrabajoAlert", "Trabajo finalizado y notificado al cliente.", "success");
+    }
     cerrarFormularioFinalizacion();
     cargarTrabajosMecanico();
   } catch (err) {

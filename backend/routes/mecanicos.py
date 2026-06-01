@@ -5,6 +5,7 @@ import psycopg2.extras
 import hashlib
 
 from database import get_connection
+from email_utils import enviar_correo_trabajo_finalizado
 
 router = APIRouter()
 
@@ -357,9 +358,15 @@ def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajo
     try:
         cur.execute(
             """
-            SELECT c.id, c.taller_id, c.estado
+            SELECT c.id, c.taller_id, c.estado, c.fecha_hora,
+                   u.nombre AS cliente, u.email AS cliente_email,
+                   t.nombre AS taller,
+                   v.tipo_vehiculo, v.marca, v.placa
             FROM citas c
             JOIN mecanicos m ON c.mecanico_id = m.id
+            JOIN usuarios u ON c.usuario_id = u.id
+            JOIN talleres t ON c.taller_id = t.id
+            JOIN vehiculos v ON c.vehiculo_id = v.id
             WHERE c.id = %s
               AND c.mecanico_id = %s
               AND c.estado = 'confirmada'
@@ -373,7 +380,7 @@ def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajo
 
         cur.execute(
             """
-            SELECT id, precio
+            SELECT id, nombre, precio
             FROM servicios
             WHERE id = %s AND taller_id = %s
             """,
@@ -414,7 +421,23 @@ def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajo
             (cita_id,),
         )
         conn.commit()
-        return {"mensaje": "Trabajo marcado como terminado."}
+
+        correo_enviado = True
+        try:
+            enviar_correo_trabajo_finalizado(
+                email_destino=cita["cliente_email"],
+                cliente=cita["cliente"],
+                taller=cita["taller"],
+                fecha_hora=str(cita["fecha_hora"]),
+                vehiculo=f"{cita['tipo_vehiculo']} {cita['marca']} ({cita['placa']})",
+                servicio=servicio["nombre"],
+                costo_final=float(costo_final),
+                observaciones=observaciones,
+            )
+        except Exception:
+            correo_enviado = False
+
+        return {"mensaje": "Trabajo marcado como terminado.", "correo_enviado": correo_enviado}
     except HTTPException:
         raise
     except Exception:

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Mecánico - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="stylesheet" href="../styles/main.css?v=16" />
 </head>
 <body>
   <div class="page">
@@ -29,8 +29,12 @@
           <p id="trabajosAsignados" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
         </div>
         <div class="info-box">
-          <h3>Pendientes</h3>
+          <h3>Pendientes de revisión</h3>
           <p id="trabajosPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
+        </div>
+        <div class="info-box">
+          <h3>Revisión hecha</h3>
+          <p id="trabajosRevisados" style="font-size:2rem;font-weight:bold;color:#0f766e;">-</p>
         </div>
         <div class="info-box">
           <h3>Terminadas</h3>
@@ -184,7 +188,7 @@
   </div>
 
   <script src="../js/app.js?v=10"></script>
-  <script src="../js/mecanico.js?v=10"></script>
+  <script src="../js/mecanico.js?v=11"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "mecanico") { window.location.href = "./login.html"; }
