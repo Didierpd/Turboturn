@@ -26,6 +26,16 @@ function formatoHora(fechaHora) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[char]));
+}
+
 async function fetchCitasTaller() {
   const usuario = usuarioTaller();
   const res = await fetch(`/api/citas/taller/${usuario.id}`);
@@ -255,6 +265,53 @@ function actualizarContadores(citas) {
   if (elHoy) elHoy.textContent = countHoy;
   if (elPend) elPend.textContent = countPend;
   if (elComp) elComp.textContent = countComp;
+}
+
+function renderBarChart(id, datos) {
+  const contenedor = document.getElementById(id);
+  if (!contenedor) return;
+
+  if (!datos || datos.length === 0) {
+    contenedor.innerHTML = `<p class="chart-empty">Sin datos disponibles</p>`;
+    return;
+  }
+
+  const max = Math.max(...datos.map(item => Number(item.total) || 0), 1);
+  contenedor.innerHTML = datos.map(item => {
+    const total = Number(item.total) || 0;
+    const ancho = Math.max((total / max) * 100, total > 0 ? 6 : 0);
+    const label = escapeHtml(item.label || "Sin dato");
+    return `
+      <div class="bar-row">
+        <div class="bar-row-head">
+          <span>${label}</span>
+          <strong>${total.toLocaleString("es-CO")}</strong>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${ancho}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function cargarEstadisticasTaller() {
+  const usuario = usuarioTaller();
+  try {
+    const res = await fetch(`/api/citas/estadisticas/taller/${usuario.id}`);
+    if (!res.ok) throw new Error("Error al cargar estadísticas");
+    const stats = await res.json();
+
+    renderBarChart("tallerCitasEstadoChart", stats.citas_por_estado);
+    renderBarChart("tallerServiciosChart", stats.servicios_mas_solicitados);
+    renderBarChart("tallerClientesMesChart", stats.clientes_por_mes);
+    renderBarChart("tallerMecanicosChart", stats.mecanicos_con_mas_citas);
+  } catch (err) {
+    ["tallerCitasEstadoChart", "tallerServiciosChart", "tallerClientesMesChart", "tallerMecanicosChart"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<p class="chart-empty">Error al cargar estadísticas</p>`;
+    });
+  }
 }
 
 async function confirmarCita(id) {

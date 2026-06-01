@@ -78,3 +78,59 @@ async function cargarTodosUsuarios() {
     tbody.innerHTML = `<tr><td colspan="5">Error al cargar usuarios</td></tr>`;
   }
 }
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[char]));
+}
+
+function renderBarChart(id, datos, opciones = {}) {
+  const contenedor = document.getElementById(id);
+  if (!contenedor) return;
+
+  if (!datos || datos.length === 0) {
+    contenedor.innerHTML = `<p class="chart-empty">Sin datos disponibles</p>`;
+    return;
+  }
+
+  const max = Math.max(...datos.map(item => Number(item.total) || 0), 1);
+  contenedor.innerHTML = datos.map(item => {
+    const total = Number(item.total) || 0;
+    const ancho = Math.max((total / max) * 100, total > 0 ? 6 : 0);
+    const label = escapeHtml(item.label || "Sin dato");
+    return `
+      <div class="bar-row">
+        <div class="bar-row-head">
+          <span>${label}</span>
+          <strong>${opciones.moneda ? "$" : ""}${total.toLocaleString("es-CO")}</strong>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${ancho}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function cargarEstadisticasAdmin() {
+  try {
+    const res = await fetch("/api/citas/estadisticas/admin");
+    if (!res.ok) throw new Error("Error al cargar estadísticas");
+    const stats = await res.json();
+
+    renderBarChart("adminCitasEstadoChart", stats.citas_por_estado);
+    renderBarChart("adminServiciosChart", stats.servicios_mas_solicitados);
+    renderBarChart("adminTalleresChart", stats.talleres_con_mas_citas);
+    renderBarChart("adminClientesMesChart", stats.clientes_por_mes);
+  } catch (err) {
+    ["adminCitasEstadoChart", "adminServiciosChart", "adminTalleresChart", "adminClientesMesChart"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<p class="chart-empty">Error al cargar estadísticas</p>`;
+    });
+  }
+}

@@ -22,6 +22,10 @@ class CitaData(BaseModel):
     servicio_id: Optional[int] = None
 
 
+def _fetchall_dict(cur):
+    return [dict(row) for row in cur.fetchall()]
+
+
 @router.get("/talleres-activos", summary="Listar talleres activos")
 def get_talleres_activos():
     conn = get_connection()
@@ -39,6 +43,163 @@ def get_talleres_activos():
         return [dict(row) for row in cur.fetchall()]
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener talleres")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/estadisticas/admin", summary="Estadísticas generales para administrador")
+def estadisticas_admin():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT estado AS label, COUNT(*)::int AS total
+            FROM citas
+            GROUP BY estado
+            ORDER BY total DESC
+            """
+        )
+        citas_por_estado = _fetchall_dict(cur)
+
+        cur.execute(
+            """
+            SELECT s.nombre AS label, COUNT(*)::int AS total
+            FROM (
+                SELECT servicio_id FROM citas WHERE servicio_id IS NOT NULL
+                UNION ALL
+                SELECT servicio_id FROM historial_servicios WHERE servicio_id IS NOT NULL
+            ) usos
+            JOIN servicios s ON s.id = usos.servicio_id
+            GROUP BY s.id, s.nombre
+            ORDER BY total DESC, s.nombre
+            LIMIT 8
+            """
+        )
+        servicios_mas_solicitados = _fetchall_dict(cur)
+
+        cur.execute(
+            """
+            SELECT t.nombre AS label, COUNT(c.id)::int AS total
+            FROM citas c
+            JOIN talleres t ON t.id = c.taller_id
+            GROUP BY t.id, t.nombre
+            ORDER BY total DESC, t.nombre
+            LIMIT 8
+            """
+        )
+        talleres_con_mas_citas = _fetchall_dict(cur)
+
+        cur.execute(
+            """
+            SELECT TO_CHAR(DATE_TRUNC('month', creado_en), 'YYYY-MM') AS label,
+                   COUNT(*)::int AS total
+            FROM usuarios
+            WHERE rol = 'usuario'
+              AND creado_en >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months'
+            GROUP BY DATE_TRUNC('month', creado_en)
+            ORDER BY label
+            """
+        )
+        clientes_por_mes = _fetchall_dict(cur)
+
+        return {
+            "citas_por_estado": citas_por_estado,
+            "servicios_mas_solicitados": servicios_mas_solicitados,
+            "talleres_con_mas_citas": talleres_con_mas_citas,
+            "clientes_por_mes": clientes_por_mes,
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener estadísticas del administrador")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/estadisticas/taller/{usuario_id}", summary="Estadísticas del taller")
+def estadisticas_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute("SELECT id FROM talleres WHERE admin_id = %s", (usuario_id,))
+        taller = cur.fetchone()
+        if not taller:
+            raise HTTPException(status_code=404, detail="Taller no encontrado para este usuario.")
+        taller_id = taller["id"]
+
+        cur.execute(
+            """
+            SELECT estado AS label, COUNT(*)::int AS total
+            FROM citas
+            WHERE taller_id = %s
+            GROUP BY estado
+            ORDER BY total DESC
+            """,
+            (taller_id,),
+        )
+        citas_por_estado = _fetchall_dict(cur)
+
+        cur.execute(
+            """
+            SELECT s.nombre AS label, COUNT(*)::int AS total
+            FROM (
+                SELECT servicio_id FROM citas
+                WHERE taller_id = %s AND servicio_id IS NOT NULL
+                UNION ALL
+                SELECT hs.servicio_id
+                FROM historial_servicios hs
+                JOIN citas c ON c.id = hs.cita_id
+                WHERE c.taller_id = %s AND hs.servicio_id IS NOT NULL
+            ) usos
+            JOIN servicios s ON s.id = usos.servicio_id
+            GROUP BY s.id, s.nombre
+            ORDER BY total DESC, s.nombre
+            LIMIT 8
+            """,
+            (taller_id, taller_id),
+        )
+        servicios_mas_solicitados = _fetchall_dict(cur)
+
+        cur.execute(
+            """
+            SELECT TO_CHAR(DATE_TRUNC('month', u.creado_en), 'YYYY-MM') AS label,
+                   COUNT(DISTINCT u.id)::int AS total
+            FROM citas c
+            JOIN usuarios u ON u.id = c.usuario_id
+            WHERE c.taller_id = %s
+              AND u.creado_en >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months'
+            GROUP BY DATE_TRUNC('month', u.creado_en)
+            ORDER BY label
+            """,
+            (taller_id,),
+        )
+        clientes_por_mes = _fetchall_dict(cur)
+
+        cur.execute(
+            """
+            SELECT COALESCE(m.nombre, 'Sin asignar') AS label, COUNT(c.id)::int AS total
+            FROM citas c
+            LEFT JOIN mecanicos m ON m.id = c.mecanico_id
+            WHERE c.taller_id = %s
+            GROUP BY COALESCE(m.nombre, 'Sin asignar')
+            ORDER BY total DESC, label
+            LIMIT 8
+            """,
+            (taller_id,),
+        )
+        mecanicos_con_mas_citas = _fetchall_dict(cur)
+
+        return {
+            "citas_por_estado": citas_por_estado,
+            "servicios_mas_solicitados": servicios_mas_solicitados,
+            "clientes_por_mes": clientes_por_mes,
+            "mecanicos_con_mas_citas": mecanicos_con_mas_citas,
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener estadísticas del taller")
     finally:
         cur.close()
         conn.close()
