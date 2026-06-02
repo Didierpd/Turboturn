@@ -1,3 +1,6 @@
+/* ==========================================================================
+   Variables globales: colores, sombras, radios y curva de animación
+   ========================================================================== */
 :root {
   --bg: #f3f6f8;
   --surface: #ffffff;
@@ -19,6 +22,9 @@
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* ==========================================================================
+   Base de documento: reset mínimo, fondo general y estructura vertical
+   ========================================================================== */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -61,6 +67,9 @@ textarea {
   flex-direction: column;
 }
 
+/* ==========================================================================
+   Animaciones compartidas: entrada de página y movimiento sutil del logo
+   ========================================================================== */
 @keyframes pageFadeIn {
   from {
     opacity: 0;
@@ -83,6 +92,9 @@ textarea {
   }
 }
 
+/* ==========================================================================
+   Landing inicial: portada, logo principal y botón de ingreso
+   ========================================================================== */
 .landing {
   flex: 1;
   min-height: 100vh;
@@ -151,6 +163,9 @@ textarea {
   gap: 12px;
 }
 
+/* ==========================================================================
+   Botones: estilos compartidos para acciones principales y secundarias
+   ========================================================================== */
 .btn,
 .btn-submit {
   position: relative;
@@ -231,6 +246,9 @@ textarea:focus-visible {
   transform: translateY(-2px);
 }
 
+/* ==========================================================================
+   Navbar: barra superior común y estados activos del menú
+   ========================================================================== */
 .navbar {
   position: sticky;
   top: 0;
@@ -301,6 +319,9 @@ textarea:focus-visible {
   transform: scaleX(1);
 }
 
+/* ==========================================================================
+   Layout base: contenedor central, tarjetas y cajas de acceso rápido
+   ========================================================================== */
 .container {
   flex: 1;
   width: min(1180px, calc(100% - 32px));
@@ -469,6 +490,9 @@ textarea:focus-visible {
   line-height: 1.48;
 }
 
+/* ==========================================================================
+   Formularios: campos, focus, validación visual y mensajes de error
+   ========================================================================== */
 .form-group {
   margin-bottom: 16px;
 }
@@ -551,6 +575,9 @@ button {
   transform: translateY(0);
 }
 
+/* ==========================================================================
+   Tablas y badges: listados de citas, usuarios, vehículos y estados
+   ========================================================================== */
 .table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--line);
@@ -626,6 +653,9 @@ table tr:last-child td {
   color: #166534;
 }
 
+/* ==========================================================================
+   Estadísticas y panel mecánico: gráficas, barras y acciones compactas
+   ========================================================================== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -730,6 +760,9 @@ table tr:last-child td {
   background: #16a34a;
 }
 
+/* ==========================================================================
+   Alertas: mensajes temporales de éxito y error
+   ========================================================================== */
 .alert {
   display: none;
   margin-top: 15px;
@@ -752,6 +785,9 @@ table tr:last-child td {
   border-color: #fecaca;
 }
 
+/* ==========================================================================
+   Footer: contacto, canales digitales y colaboradores
+   ========================================================================== */
 .app-footer {
   margin-top: auto;
   padding: 30px clamp(18px, 4vw, 42px);
@@ -847,6 +883,9 @@ table tr:last-child td {
   color: #fff;
 }
 
+/* ==========================================================================
+   Mapas: layouts Leaflet para página de mapa e inicio del usuario
+   ========================================================================== */
 .map-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -990,6 +1029,9 @@ table tr:last-child td {
   border-radius: 3px;
 }
 
+/* ==========================================================================
+   Responsive: navegación móvil, tarjetas a una columna y mapa adaptable
+   ========================================================================== */
 @media (max-width: 768px) {
   body {
     background:
@@ -1082,6 +1124,9 @@ table tr:last-child td {
   }
 }
 
+/* ==========================================================================
+   Accesibilidad: reduce animaciones si el usuario lo solicita
+   ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

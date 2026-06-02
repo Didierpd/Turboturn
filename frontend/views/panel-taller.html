@@ -9,6 +9,7 @@
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: pestañas operativas del taller -->
     <div class="navbar">
       <h2>TurboTurn — Taller</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -30,6 +31,7 @@
         <p style="color:#64748b;">Gestiona tu agenda, citas, clientes y mecánicos.</p>
       </div>
 
+      <!-- Bloque estadísticas de agenda: contadores y gráficas visibles solo en Agenda -->
       <div id="agendaStatsPanel">
         <div class="grid" style="margin-bottom:20px;">
           <div class="info-box">
@@ -241,6 +243,7 @@
 
     </div>
 
+    <!-- Bloque footer: datos de contacto comunes -->
     <footer class="app-footer">
       <div class="footer-grid">
         <div class="footer-brand">
@@ -275,6 +278,7 @@
     </footer>
   </div>
 
+  <!-- Bloque scripts: lógica compartida, panel del taller y cambio de pestañas -->
   <script src="../js/app.js?v=11"></script>
   <script src="../js/taller.js?v=18"></script>
   <script>

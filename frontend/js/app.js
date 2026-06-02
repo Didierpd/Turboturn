@@ -1,3 +1,10 @@
+// =============================================================================
+// app.js
+// Funciones compartidas del frontend de clientes: login, registro, citas,
+// vehículos, mensajes de alerta y carga inicial por página.
+// =============================================================================
+
+// ── Bloque global: fuerza llamadas API sin caché del navegador ───────────────
 function activarFetchSinCache() {
   if (window.__turboTurnFetchSinCache) return;
   window.__turboTurnFetchSinCache = true;
@@ -27,6 +34,7 @@ function activarFetchSinCache() {
 
 activarFetchSinCache();
 
+// ── Bloque de UI: muestra alertas temporales reutilizables ───────────────────
 function mostrarMensaje(id, mensaje, tipo = "success") {
   const alertBox = document.getElementById(id);
   if (!alertBox) return;
@@ -40,6 +48,7 @@ function mostrarMensaje(id, mensaje, tipo = "success") {
   }, 3000);
 }
 
+// ── Bloque login: inicia sesión y redirige según MFA/rol ─────────────────────
 function activarFormularioLogin() {
   const form = document.getElementById("loginForm");
   if (!form) return;
@@ -124,6 +133,7 @@ function activarFormularioLogin() {
   }
 }
 
+// ── Bloque select de talleres: carga talleres activos para reservar cita ─────
 async function cargarTalleresEnSelect() {
   const select = document.getElementById("taller");
   if (!select) return;
@@ -141,6 +151,7 @@ async function cargarTalleresEnSelect() {
   }
 }
 
+// ── Bloque select de vehículos: carga vehículos del usuario actual ───────────
 async function cargarVehiculosEnSelect() {
   const select = document.getElementById("vehiculo");
   if (!select) return;
@@ -162,6 +173,7 @@ async function cargarVehiculosEnSelect() {
   }
 }
 
+// ── Bloque formulario de citas: reserva cita y carga servicios por taller ────
 function activarFormularioCitas() {
   const form = document.getElementById("citaForm");
   if (!form) return;
@@ -270,6 +282,7 @@ function activarFormularioCitas() {
   });
 }
 
+// ── Bloque tabla de citas: lista citas del usuario en paneles cliente ────────
 async function cargarCitasUsuario() {
   const tbody = document.getElementById("citasBody");
   if (!tbody) return;
@@ -310,6 +323,7 @@ async function cargarCitasUsuario() {
   }
 }
 
+// ── Bloque vehículos: lista vehículos registrados por el usuario ─────────────
 async function cargarVehiculos() {
   const usuario = JSON.parse(localStorage.getItem("usuario"));
   if (!usuario) return;
@@ -345,6 +359,7 @@ async function cargarVehiculos() {
   }
 }
 
+// ── Bloque vehículos: elimina un vehículo del usuario con confirmación ───────
 async function eliminarVehiculo(id) {
   const usuario = JSON.parse(localStorage.getItem("usuario"));
   if (!usuario) return;
@@ -369,6 +384,7 @@ async function eliminarVehiculo(id) {
   }
 }
 
+// ── Bloque formulario vehículos: registra nuevos vehículos del usuario ───────
 function activarFormularioVehiculos() {
   const form = document.getElementById("vehiculoForm");
   if (!form) return;
@@ -409,6 +425,7 @@ function activarFormularioVehiculos() {
   });
 }
 
+// ── Bloque registro: crea cuentas de usuario o taller con ubicación ──────────
 function activarFormularioRegistro() {
   const form = document.getElementById("registroForm");
   if (!form) return;
@@ -480,6 +497,7 @@ function activarFormularioRegistro() {
   });
 }
 
+// ── Bloque arranque: activa solo los formularios presentes en cada vista ─────
 document.addEventListener("DOMContentLoaded", function () {
   activarFormularioLogin();
   activarFormularioRegistro();

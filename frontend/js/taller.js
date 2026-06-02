@@ -1,3 +1,10 @@
+// =============================================================================
+// taller.js
+// Lógica del panel del taller: agenda, citas, clientes, mecánicos, servicios,
+// contadores, gráficas y acciones de estado/facturación.
+// =============================================================================
+
+// ── Bloque de configuración: clases visuales y cachés de peticiones ──────────
 const badgeClass = {
   pendiente: "badge-pendiente",
   confirmada: "badge-confirmada",
@@ -11,6 +18,7 @@ let citasTallerCache = null;
 let citasTallerPromise = null;
 let mecanicosTallerPromise = null;
 
+// ── Bloque utilidades: usuario actual, fechas y escape de HTML ───────────────
 function usuarioTaller() {
   return JSON.parse(localStorage.getItem("usuario"));
 }
@@ -39,6 +47,7 @@ function escapeHtml(value) {
   }[char]));
 }
 
+// ── Bloque datos remotos: citas y mecánicos con caché para evitar duplicados ─
 async function fetchCitasTaller() {
   if (citasTallerCache) return citasTallerCache;
   if (citasTallerPromise) return citasTallerPromise;
@@ -81,6 +90,7 @@ async function fetchMecanicosTaller() {
   return mecanicosTallerPromise;
 }
 
+// ── Bloque UI de mecánicos: opciones y celda de asignación por cita ──────────
 function opcionesMecanicos(mecanicoId) {
   const activos = mecanicosCache.filter(m => m.activo);
   if (activos.length === 0) {
@@ -105,6 +115,7 @@ function celdaMecanico(cita) {
   return cita.mecanico_nombre || "-";
 }
 
+// ── Bloque acciones por cita: botones disponibles según estado ───────────────
 function botonesAccion(cita) {
   let btns = "";
   if (cita.estado === "pendiente") {
@@ -122,6 +133,7 @@ function botonesAccion(cita) {
   return `<div style="display:flex;gap:6px;flex-wrap:wrap;">${btns}</div>`;
 }
 
+// ── Bloque agenda: muestra solo las citas del día actual ─────────────────────
 async function cargarAgendaHoy() {
   const tbody = document.getElementById("agendaHoyBody");
   if (!tbody) return;
@@ -154,6 +166,7 @@ async function cargarAgendaHoy() {
   }
 }
 
+// ── Bloque citas: muestra el historial completo de citas del taller ──────────
 async function cargarTodasCitas() {
   const tbody = document.getElementById("todasCitasBody");
   if (!tbody) return;
@@ -182,6 +195,7 @@ async function cargarTodasCitas() {
   }
 }
 
+// ── Bloque clientes: lista clientes que han reservado en el taller ───────────
 async function cargarClientes() {
   const tbody = document.getElementById("clientesBody");
   if (!tbody) return;
@@ -210,6 +224,7 @@ async function cargarClientes() {
   }
 }
 
+// ── Bloque mecánicos: lista y administra mecánicos del taller ────────────────
 async function cargarMecanicos() {
   const tbody = document.getElementById("mecanicosBody");
   if (!tbody) return;
@@ -246,6 +261,7 @@ async function cargarMecanicos() {
   }
 }
 
+// ── Bloque servicios: lista servicios creados por el taller ──────────────────
 async function cargarServiciosTaller() {
   const tbody = document.getElementById("serviciosTallerBody");
   if (!tbody) return;
@@ -286,6 +302,7 @@ async function cargarServiciosTaller() {
   }
 }
 
+// ── Bloque resumen: actualiza contadores principales de agenda ───────────────
 function actualizarContadores(citas) {
   const hoy = new Date().toDateString();
   const countHoy = citas.filter(c => new Date(c.fecha_hora).toDateString() === hoy).length;
@@ -300,6 +317,7 @@ function actualizarContadores(citas) {
   if (elComp) elComp.textContent = countComp;
 }
 
+// ── Bloque gráficas: renderiza barras sin librerías externas ─────────────────
 function renderBarChart(id, datos) {
   const contenedor = document.getElementById(id);
   if (!contenedor) return;
@@ -328,6 +346,7 @@ function renderBarChart(id, datos) {
   }).join("");
 }
 
+// ── Bloque estadísticas: agrupa datos para gráficas cuando falla el endpoint ─
 function agruparConteos(items, obtenerLabel) {
   const conteos = new Map();
   items.forEach(item => {
@@ -375,6 +394,7 @@ function renderEstadisticasTaller(stats) {
   renderBarChart("tallerMecanicosChart", stats.mecanicos_con_mas_citas);
 }
 
+// ── Bloque estadísticas: carga métricas remotas o usa citas como respaldo ────
 async function cargarEstadisticasTaller() {
   const usuario = usuarioTaller();
   try {
@@ -395,6 +415,7 @@ async function cargarEstadisticasTaller() {
   }
 }
 
+// ── Bloque cambio de estado: confirmar, cancelar y refrescar panel ───────────
 async function confirmarCita(id) {
   const mecanicoId = document.getElementById(`mecanico-cita-${id}`)?.value;
   if (!mecanicoId) {
@@ -445,6 +466,7 @@ async function cambiarEstadoCita(id, estado, mecanicoId = null) {
   }
 }
 
+// ── Bloque formulario mecánicos: alta de mecánicos para asignar citas ────────
 function activarFormularioMecanicos() {
   const form = document.getElementById("mecanicoForm");
   if (!form) return;
@@ -483,6 +505,7 @@ function activarFormularioMecanicos() {
   });
 }
 
+// ── Bloque administración mecánicos: estado, clave y eliminación ─────────────
 async function cambiarEstadoMecanico(id, activo) {
   const usuario = usuarioTaller();
   try {
@@ -552,6 +575,7 @@ async function eliminarMecanico(id) {
   }
 }
 
+// ── Bloque formulario servicios: alta y edición de servicios del taller ──────
 function activarFormularioServicios() {
   const form = document.getElementById("servicioForm");
   const cancelarBtn = document.getElementById("servicioCancelarEdicionBtn");
@@ -599,6 +623,7 @@ function activarFormularioServicios() {
   });
 }
 
+// ── Bloque edición servicios: llena el formulario para modificar un servicio ─
 function editarServicio(id) {
   const servicio = serviciosTallerCache.find(s => Number(s.id) === Number(id));
   if (!servicio) return;
@@ -614,6 +639,7 @@ function editarServicio(id) {
   document.getElementById("servicioForm").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// ── Bloque edición servicios: limpia el formulario y sale del modo edición ───
 function cancelarEdicionServicio() {
   const form = document.getElementById("servicioForm");
   if (!form) return;
@@ -624,6 +650,7 @@ function cancelarEdicionServicio() {
   document.getElementById("servicioCancelarEdicionBtn").style.display = "none";
 }
 
+// ── Bloque eliminación servicios: borra servicios no usados en historiales ───
 async function eliminarServicio(id) {
   const usuario = usuarioTaller();
   if (!confirm("¿Eliminar este servicio? Esta acción no se puede deshacer.")) return;
@@ -646,6 +673,7 @@ async function eliminarServicio(id) {
   }
 }
 
+// ── Bloque facturación: solicita al backend generar y enviar PDF por correo ──
 async function enviarFactura(citaId) {
   if (!confirm("¿Enviar la factura al cliente por correo?")) return;
   try {

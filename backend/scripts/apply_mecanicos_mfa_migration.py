@@ -1,11 +1,20 @@
+"""
+Aplica la migración SQL que agrega soporte MFA para mecánicos.
+
+Uso esperado:
+  python3 backend/scripts/apply_mecanicos_mfa_migration.py
+"""
+
 from pathlib import Path
 import sys
 
+# ── Bloque path: permite importar database.py desde la carpeta backend ───────
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 from database import get_connection
 
 
+# ── Bloque ejecución: lee el SQL, lo ejecuta y confirma o revierte cambios ───
 def main():
     sql_path = Path(__file__).resolve().parents[2] / "database" / "mecanicos_mfa_migration.sql"
     sql = sql_path.read_text(encoding="utf-8")

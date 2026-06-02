@@ -9,6 +9,7 @@
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: acceso al panel de trabajos y salida -->
     <div class="navbar">
       <h2>TurboTurn - Mecánico</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -19,11 +20,13 @@
     </div>
 
     <div class="container">
+      <!-- Bloque bienvenida: datos del mecánico y taller asociado -->
       <div class="card">
         <h1 id="bienvenida">Panel del mecánico</h1>
         <p id="tallerNombre" style="color:#64748b;"></p>
       </div>
 
+      <!-- Bloque contadores: resumen de trabajos por etapa -->
       <div class="grid" style="margin-bottom:20px;">
         <div class="info-box">
           <h3>Asignadas</h3>
@@ -43,6 +46,7 @@
         </div>
       </div>
 
+      <!-- Bloque MFA: seguridad de acceso del mecánico -->
       <div class="card">
         <h2>Seguridad - Verificación en dos pasos</h2>
         <p style="color:#64748b;margin-bottom:16px;">
@@ -84,6 +88,7 @@
         <div id="mfaAlertMecanico" class="alert" style="margin-top:12px;"></div>
       </div>
 
+      <!-- Bloque tabla: trabajos asignados al mecánico -->
       <div class="card">
         <h2>Mis trabajos asignados</h2>
         <div class="table-wrapper" style="margin-top:15px;">
@@ -127,6 +132,7 @@
         <div id="revisionTrabajoAlert" class="alert" style="margin-top:12px;"></div>
       </div>
 
+      <!-- Bloque finalización: servicio realizado, costo final y cierre del trabajo -->
       <div class="card" id="finalizarTrabajoCard" style="display:none;">
         <h2>Finalizar trabajo</h2>
         <form id="finalizarTrabajoForm">

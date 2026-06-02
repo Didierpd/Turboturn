@@ -1,3 +1,10 @@
+// =============================================================================
+// admin.js
+// Lógica del panel administrador: aprobación de talleres, gestión de usuarios
+// y gráficas generales de operación.
+// =============================================================================
+
+// ── Bloque talleres pendientes: lista solicitudes de talleres por aprobar ────
 async function cargarTalleresPendientes() {
   const tbody = document.getElementById("talleresPendientesBody");
   if (!tbody) return;
@@ -28,6 +35,7 @@ async function cargarTalleresPendientes() {
   }
 }
 
+// ── Bloque aprobación/rechazo: cambia estado de talleres solicitantes ────────
 async function aprobarTaller(id) {
   try {
     const res = await fetch(`/api/usuarios/${id}/aprobar`, { method: "PUT" });
@@ -54,6 +62,7 @@ async function rechazarTaller(id) {
   }
 }
 
+// ── Bloque usuarios: lista todas las cuentas para administración ─────────────
 async function cargarTodosUsuarios() {
   const tbody = document.getElementById("usuariosBody");
   if (!tbody) return;
@@ -89,6 +98,7 @@ async function cargarTodosUsuarios() {
   }
 }
 
+// ── Bloque estado usuarios: activar, restringir o eliminar cuentas ───────────
 async function activarUsuario(id) {
   if (!confirm("¿Activar este usuario?")) return;
   try {
@@ -128,6 +138,7 @@ async function eliminarUsuario(id) {
   }
 }
 
+// ── Bloque seguridad visual: evita insertar HTML sin escapar en gráficas ─────
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -138,6 +149,7 @@ function escapeHtml(value) {
   }[char]));
 }
 
+// ── Bloque gráficas: pinta barras de estadísticas sin dependencia externa ────
 function renderBarChart(id, datos, opciones = {}) {
   const contenedor = document.getElementById(id);
   if (!contenedor) return;
@@ -166,6 +178,7 @@ function renderBarChart(id, datos, opciones = {}) {
   }).join("");
 }
 
+// ── Bloque estadísticas: carga métricas globales para el panel admin ─────────
 async function cargarEstadisticasAdmin() {
   try {
     const res = await fetch("/api/citas/estadisticas/admin");

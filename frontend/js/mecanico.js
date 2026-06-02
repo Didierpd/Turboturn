@@ -1,3 +1,10 @@
+// =============================================================================
+// mecanico.js
+// Controla el panel del mecánico: trabajos asignados, revisión inicial,
+// finalización del servicio, actualización de historial y MFA.
+// =============================================================================
+
+// ── Bloque configuración: clases visuales y cachés del panel ─────────────────
 const mecanicoBadgeClass = {
   pendiente: "badge-pendiente",
   pendiente_revision: "badge-pendiente",
@@ -10,6 +17,7 @@ const mecanicoBadgeClass = {
 let trabajosCache = [];
 let serviciosCache = [];
 
+// ── Bloque UI compartida: mensajes temporales y datos del mecánico actual ────
 function mostrarMensaje(id, mensaje, tipo = "success") {
   const alertBox = document.getElementById(id);
   if (!alertBox) return;
@@ -27,6 +35,7 @@ function mecanicoActual() {
   return JSON.parse(localStorage.getItem("usuario"));
 }
 
+// ── Bloque formato: fechas y limpieza de texto para pintar tablas ────────────
 function formatoFechaTrabajo(fechaHora) {
   return new Date(fechaHora).toLocaleString("es-CO", {
     dateStyle: "short",
@@ -44,6 +53,7 @@ function escaparHtml(valor) {
   }[caracter]));
 }
 
+// ── Bloque estado del trabajo: interpreta la fase actual de cada cita ────────
 function etapaTrabajo(cita) {
   if (cita.estado === "completada") {
     return {
@@ -76,6 +86,7 @@ function etapaTrabajo(cita) {
   };
 }
 
+// ── Bloque acciones de tabla: botones según fase del trabajo ─────────────────
 function botonTrabajo(cita) {
   if (cita.estado !== "confirmada") {
     return "-";
@@ -97,6 +108,7 @@ function botonTrabajo(cita) {
   `;
 }
 
+// ── Bloque revisión: muestra resumen de diagnóstico ya registrado ────────────
 function resumenRevision(cita) {
   // Muestra en la tabla lo que el mecánico ya reportó después de revisar el vehículo.
   if (!cita.tiempo_estimado_revision && !cita.trabajo_requerido) {
@@ -111,6 +123,7 @@ function resumenRevision(cita) {
   `;
 }
 
+// ── Bloque contadores: métricas rápidas del panel mecánico ───────────────────
 function actualizarContadoresTrabajos(citas) {
   const asignadas = citas.length;
   const pendientes = citas.filter(c => etapaTrabajo(c).clave === "pendiente_revision").length;
@@ -123,6 +136,7 @@ function actualizarContadoresTrabajos(citas) {
   document.getElementById("trabajosTerminados").textContent = terminadas;
 }
 
+// ── Bloque trabajos: carga y pinta las citas asignadas al mecánico ───────────
 async function cargarTrabajosMecanico() {
   const tbody = document.getElementById("trabajosBody");
   if (!tbody) return;
@@ -166,6 +180,7 @@ async function cargarTrabajosMecanico() {
   }
 }
 
+// ── Bloque formulario revisión: abre/cierra y guarda diagnóstico inicial ─────
 function abrirFormularioRevision(citaId) {
   const cita = trabajosCache.find(c => Number(c.id) === Number(citaId));
   if (!cita) return;
@@ -237,6 +252,7 @@ async function guardarRevisionTrabajo(citaId, datos) {
   }
 }
 
+// ── Bloque servicios: carga servicios del taller para finalizar trabajos ─────
 async function cargarServiciosMecanico() {
   const mecanico = mecanicoActual();
   const select = document.getElementById("servicioRealizado");
@@ -262,6 +278,7 @@ async function cargarServiciosMecanico() {
   }
 }
 
+// ── Bloque formulario finalización: abre/cierra y valida cierre de trabajo ───
 function abrirFormularioFinalizacion(citaId) {
   const cita = trabajosCache.find(c => Number(c.id) === Number(citaId));
   if (!cita) return;
@@ -321,6 +338,7 @@ function activarFormularioFinalizacion() {
   });
 }
 
+// ── Bloque cierre: marca el trabajo como terminado y notifica al cliente ─────
 async function terminarTrabajo(citaId, datos) {
   const mecanico = mecanicoActual();
   try {

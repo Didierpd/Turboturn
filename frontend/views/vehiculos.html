@@ -9,6 +9,7 @@
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: menú principal del usuario -->
     <div class="navbar">
       <h2>TurboTurn</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -22,6 +23,7 @@
       </div>
     </div>
     <div class="container">
+      <!-- Bloque formulario: registro de vehículos del usuario -->
       <div class="card">
         <h1>Registrar vehículo</h1>
         <form id="vehiculoForm">
@@ -57,6 +59,7 @@
         </form>
         <div id="vehiculoAlert" class="alert"></div>
       </div>
+      <!-- Bloque tabla: vehículos ya registrados -->
       <div class="card">
         <h2>Vehículos registrados</h2>
         <div class="table-wrapper">
@@ -76,6 +79,7 @@
         </div>
       </div>
     </div>
+    <!-- Bloque footer: datos de contacto comunes -->
     <footer class="app-footer">
       <div class="footer-grid">
         <div class="footer-brand">
@@ -109,6 +113,7 @@
       </div>
     </footer>
   </div>
+  <!-- Bloque scripts: lógica de vehículos, placa por tipo y salida -->
   <script src="../js/app.js?v=11"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));

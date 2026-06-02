@@ -16,6 +16,7 @@
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: retorno a inicio o login -->
     <div class="navbar">
       <h2>TurboTurn</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -26,6 +27,7 @@
     </div>
 
     <div class="container">
+      <!-- Bloque registro: formulario para usuario o taller mecánico -->
       <div class="card" style="max-width:550px; margin:40px auto;">
         <h1>Crear cuenta</h1>
         <p style="margin-bottom:20px; color:#64748b;">Regístrate como usuario o taller mecánico.</p>
@@ -106,6 +108,7 @@
       </div>
     </div>
 
+    <!-- Bloque footer: datos de contacto comunes -->
     <footer class="app-footer">
       <div class="footer-grid">
         <div class="footer-brand">
@@ -140,6 +143,7 @@
     </footer>
   </div>
 
+  <!-- Bloque scripts: registro, mapa de ubicación del taller y geocodificación -->
   <script src="../js/app.js?v=11"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>

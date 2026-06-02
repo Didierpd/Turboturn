@@ -10,6 +10,7 @@
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: menú principal del usuario -->
     <div class="navbar">
       <h2>TurboTurn</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -24,11 +25,13 @@
     </div>
 
     <div class="container">
+      <!-- Bloque encabezado: estado de carga y resumen del mapa -->
       <div class="card">
         <h1>Mapa de talleres</h1>
         <p id="mapaEstado" style="color:#64748b;">Cargando talleres activos...</p>
       </div>
 
+      <!-- Bloque mapa: mapa Leaflet y lista lateral de talleres activos -->
       <div class="map-layout">
         <div class="map-panel">
           <div id="mapaTalleres"></div>
@@ -42,6 +45,7 @@
       </div>
     </div>
 
+    <!-- Bloque footer: datos de contacto comunes -->
     <footer class="app-footer">
       <div class="footer-grid">
         <div class="footer-brand">
@@ -76,6 +80,7 @@
     </footer>
   </div>
 
+  <!-- Bloque scripts: Leaflet, lógica compartida y carga del mapa -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/app.js?v=11"></script>
   <script src="../js/mapa-talleres.js?v=10"></script>

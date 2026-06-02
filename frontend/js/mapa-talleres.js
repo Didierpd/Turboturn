@@ -1,10 +1,19 @@
+// =============================================================================
+// mapa-talleres.js
+// Renderiza el mapa público de talleres activos y la lista lateral. También se
+// reutiliza en el inicio del usuario para mostrar talleres cercanos.
+// =============================================================================
+
+// ── Bloque estado del mapa: instancia Leaflet y marcadores activos ───────────
 let mapaTalleres = null;
 let marcadoresTalleres = [];
 
+// ── Bloque validación: confirma que una latitud/longitud sea usable ──────────
 function coordenadaValida(valor) {
   return valor !== null && valor !== undefined && valor !== "" && !Number.isNaN(Number(valor));
 }
 
+// ── Bloque marcador: HTML e ícono personalizado para talleres ────────────────
 function marcadorHtml() {
   return `
     <span class="map-marker">
@@ -23,6 +32,7 @@ function crearIconoTaller() {
   });
 }
 
+// ── Bloque popup: contenido mostrado al seleccionar un taller ────────────────
 function popupTaller(taller) {
   return `
     <div class="map-popup">
@@ -33,6 +43,7 @@ function popupTaller(taller) {
   `;
 }
 
+// ── Bloque lista: pinta botones para enfocar talleres desde la lista ─────────
 function pintarListaTalleres(talleres) {
   const lista = document.getElementById("listaTalleresMapa");
   if (!lista) return;
@@ -50,6 +61,7 @@ function pintarListaTalleres(talleres) {
   `).join("");
 }
 
+// ── Bloque interacción: centra el mapa en un taller seleccionado ─────────────
 function enfocarTaller(index) {
   const marcador = marcadoresTalleres[index];
   if (!mapaTalleres || !marcador) return;
@@ -58,6 +70,7 @@ function enfocarTaller(index) {
   marcador.openPopup();
 }
 
+// ── Bloque carga principal: inicializa Leaflet y obtiene talleres activos ────
 async function cargarMapaTalleres() {
   const contenedor = document.getElementById("mapaTalleres");
   if (!contenedor) return;
@@ -104,4 +117,5 @@ async function cargarMapaTalleres() {
   }
 }
 
+// ── Bloque arranque: espera el DOM antes de crear el mapa ────────────────────
 document.addEventListener("DOMContentLoaded", cargarMapaTalleres);

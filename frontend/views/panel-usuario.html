@@ -10,6 +10,7 @@
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: accesos principales del usuario -->
     <div class="navbar">
       <h2>TurboTurn</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -25,11 +26,13 @@
  
     <div class="container">
  
+      <!-- Bloque bienvenida: identifica al usuario autenticado -->
       <div class="card">
         <h1 id="bienvenida">Bienvenido</h1>
         <p style="color:#64748b;">Panel de usuario — gestiona tus citas y vehículos.</p>
       </div>
  
+      <!-- Bloque accesos rápidos: tarjetas hacia flujos principales -->
       <div class="grid">
         <a href="./citas.html" style="text-decoration:none;">
           <div class="info-box">
@@ -57,6 +60,7 @@
         </a>
       </div>
 
+      <!-- Bloque mapa inicio: talleres activos cerca del usuario -->
       <div class="card home-map-card">
         <h2>Talleres activos cerca de ti</h2>
         <p id="mapaEstado" style="color:#64748b;margin-bottom:14px;">Cargando talleres activos...</p>
@@ -64,6 +68,7 @@
           <div id="mapaTalleres"></div>
         </div>
       </div>
+
       <!-- ══════════════════════════════════════════ -->
       <!--         SECCIÓN MFA                        -->
       <!-- ══════════════════════════════════════════ -->
@@ -172,6 +177,7 @@
       </div>
       <!-- ══════════════════════════════════════════ -->
  
+      <!-- Bloque citas recientes: resumen de reservas del usuario -->
       <div class="card" style="margin-top:20px;">
         <h2>Mis citas recientes</h2>
         <div class="table-wrapper">
@@ -193,6 +199,7 @@
       </div>
  
     </div>
+    <!-- Bloque footer: datos de contacto comunes -->
     <footer class="app-footer">
       <div class="footer-grid">
         <div class="footer-brand">
@@ -227,6 +234,7 @@
     </footer>
   </div>
  
+  <!-- Bloque scripts: mapa, lógica compartida, sesión y MFA -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/app.js?v=11"></script>
   <script src="../js/mapa-talleres.js?v=10"></script>
