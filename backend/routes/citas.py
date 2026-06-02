@@ -238,14 +238,17 @@ def get_citas_taller(usuario_id: int):
     try:
         cur.execute(
             """
-            SELECT c.id, c.fecha_hora, c.estado, c.notas, c.mecanico_id,
-                   u.nombre AS cliente, v.marca, v.placa, v.tipo_vehiculo,
-                   m.nombre AS mecanico_nombre
+            SELECT c.id, c.fecha_hora, c.estado, c.notas, c.mecanico_id, c.servicio_id,
+                   u.id AS usuario_id, u.nombre AS cliente, u.creado_en AS cliente_creado_en,
+                   v.marca, v.placa, v.tipo_vehiculo,
+                   m.nombre AS mecanico_nombre,
+                   s.nombre AS servicio_nombre
             FROM citas c
             JOIN usuarios u ON c.usuario_id = u.id
             JOIN vehiculos v ON c.vehiculo_id = v.id
             JOIN talleres t ON c.taller_id = t.id
             LEFT JOIN mecanicos m ON c.mecanico_id = m.id
+            LEFT JOIN servicios s ON c.servicio_id = s.id
             WHERE t.admin_id = %s
             ORDER BY c.fecha_hora DESC
             """,

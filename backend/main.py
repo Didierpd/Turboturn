@@ -71,7 +71,7 @@ frontend_path = os.path.join(os.path.dirname(__file__), "../frontend")
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse(os.path.join(frontend_path, "images", "logo_turbo.png"))
+    return FileResponse(os.path.join(frontend_path, "images", "favicon_turbo.png"))
 
 
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

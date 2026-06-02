@@ -7,6 +7,9 @@ const badgeClass = {
 
 let mecanicosCache = [];
 let serviciosTallerCache = [];
+let citasTallerCache = null;
+let citasTallerPromise = null;
+let mecanicosTallerPromise = null;
 
 function usuarioTaller() {
   return JSON.parse(localStorage.getItem("usuario"));
@@ -37,18 +40,45 @@ function escapeHtml(value) {
 }
 
 async function fetchCitasTaller() {
+  if (citasTallerCache) return citasTallerCache;
+  if (citasTallerPromise) return citasTallerPromise;
+
   const usuario = usuarioTaller();
-  const res = await fetch(`/api/citas/taller/${usuario.id}`);
-  if (!res.ok) throw new Error("Error al cargar citas");
-  return await res.json();
+  citasTallerPromise = fetch(`/api/citas/taller/${usuario.id}`)
+    .then(res => {
+      if (!res.ok) throw new Error("Error al cargar citas");
+      return res.json();
+    })
+    .then(citas => {
+      citasTallerCache = citas;
+      return citas;
+    })
+    .finally(() => {
+      citasTallerPromise = null;
+    });
+
+  return citasTallerPromise;
 }
 
 async function fetchMecanicosTaller() {
+  if (mecanicosCache.length) return mecanicosCache;
+  if (mecanicosTallerPromise) return mecanicosTallerPromise;
+
   const usuario = usuarioTaller();
-  const res = await fetch(`/api/mecanicos/taller/${usuario.id}`);
-  if (!res.ok) throw new Error("Error al cargar mecánicos");
-  mecanicosCache = await res.json();
-  return mecanicosCache;
+  mecanicosTallerPromise = fetch(`/api/mecanicos/taller/${usuario.id}`)
+    .then(res => {
+      if (!res.ok) throw new Error("Error al cargar mecánicos");
+      return res.json();
+    })
+    .then(mecanicos => {
+      mecanicosCache = mecanicos;
+      return mecanicos;
+    })
+    .finally(() => {
+      mecanicosTallerPromise = null;
+    });
+
+  return mecanicosTallerPromise;
 }
 
 function opcionesMecanicos(mecanicoId) {
@@ -295,22 +325,70 @@ function renderBarChart(id, datos) {
   }).join("");
 }
 
+function agruparConteos(items, obtenerLabel) {
+  const conteos = new Map();
+  items.forEach(item => {
+    const label = obtenerLabel(item);
+    if (!label) return;
+    conteos.set(label, (conteos.get(label) || 0) + 1);
+  });
+
+  return Array.from(conteos.entries())
+    .map(([label, total]) => ({ label, total }))
+    .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label))
+    .slice(0, 8);
+}
+
+function estadisticasDesdeCitas(citas) {
+  const clientesPorMes = new Map();
+  const clientesVistosPorMes = new Set();
+
+  citas.forEach(cita => {
+    const fecha = cita.cliente_creado_en || cita.fecha_hora;
+    if (!fecha || !cita.usuario_id) return;
+
+    const mes = new Date(fecha).toISOString().slice(0, 7);
+    const clave = `${mes}-${cita.usuario_id}`;
+    if (clientesVistosPorMes.has(clave)) return;
+
+    clientesVistosPorMes.add(clave);
+    clientesPorMes.set(mes, (clientesPorMes.get(mes) || 0) + 1);
+  });
+
+  return {
+    citas_por_estado: agruparConteos(citas, c => c.estado || "Sin estado"),
+    servicios_mas_solicitados: agruparConteos(citas, c => c.servicio_nombre || "Revisión general"),
+    clientes_por_mes: Array.from(clientesPorMes.entries())
+      .map(([label, total]) => ({ label, total }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    mecanicos_con_mas_citas: agruparConteos(citas, c => c.mecanico_nombre || "Sin asignar"),
+  };
+}
+
+function renderEstadisticasTaller(stats) {
+  renderBarChart("tallerCitasEstadoChart", stats.citas_por_estado);
+  renderBarChart("tallerServiciosChart", stats.servicios_mas_solicitados);
+  renderBarChart("tallerClientesMesChart", stats.clientes_por_mes);
+  renderBarChart("tallerMecanicosChart", stats.mecanicos_con_mas_citas);
+}
+
 async function cargarEstadisticasTaller() {
   const usuario = usuarioTaller();
   try {
     const res = await fetch(`/api/citas/estadisticas/taller/${usuario.id}`);
     if (!res.ok) throw new Error("Error al cargar estadísticas");
     const stats = await res.json();
-
-    renderBarChart("tallerCitasEstadoChart", stats.citas_por_estado);
-    renderBarChart("tallerServiciosChart", stats.servicios_mas_solicitados);
-    renderBarChart("tallerClientesMesChart", stats.clientes_por_mes);
-    renderBarChart("tallerMecanicosChart", stats.mecanicos_con_mas_citas);
+    renderEstadisticasTaller(stats);
   } catch (err) {
-    ["tallerCitasEstadoChart", "tallerServiciosChart", "tallerClientesMesChart", "tallerMecanicosChart"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = `<p class="chart-empty">Error al cargar estadísticas</p>`;
-    });
+    try {
+      const citas = await fetchCitasTaller();
+      renderEstadisticasTaller(estadisticasDesdeCitas(citas));
+    } catch (fallbackErr) {
+      ["tallerCitasEstadoChart", "tallerServiciosChart", "tallerClientesMesChart", "tallerMecanicosChart"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<p class="chart-empty">Error al cargar estadísticas</p>`;
+      });
+    }
   }
 }
 
@@ -354,9 +432,11 @@ async function cambiarEstadoCita(id, estado, mecanicoId = null) {
       alert(data.mensaje || "La cita fue cancelada, pero no se pudo enviar el correo al cliente.");
     }
 
+    citasTallerCache = null;
     const tabActivo = document.querySelector(".tab-btn.active")?.dataset.tab;
     if (tabActivo === "agenda") cargarAgendaHoy();
     else if (tabActivo === "citas") cargarTodasCitas();
+    cargarEstadisticasTaller();
   } catch (err) {
     alert("Error al actualizar la cita.");
   }
