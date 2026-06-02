@@ -1,3 +1,19 @@
+"""
+routes/mecanicos.py
+Gestión de mecánicos por taller y flujo de trabajo de citas asignadas.
+
+  GET    /api/mecanicos/taller/{usuario_id}               → listar mecánicos del taller
+  POST   /api/mecanicos/taller/{usuario_id}               → registrar mecánico
+  PUT    /api/mecanicos/{id}/taller/{usuario_id}          → actualizar datos del mecánico
+  POST   /api/mecanicos/login                             → login del mecánico (fase 1, soporta MFA)
+  PUT    /api/mecanicos/{id}/taller/{usuario_id}/password → cambiar contraseña
+  DELETE /api/mecanicos/{id}/taller/{usuario_id}          → eliminar (solo sin citas asociadas)
+  GET    /api/mecanicos/{id}/citas                        → citas asignadas al mecánico
+  PUT    /api/mecanicos/{id}/citas/{cita_id}/revision     → guardar diagnóstico inicial
+  PUT    /api/mecanicos/{id}/citas/{cita_id}/terminar     → cerrar trabajo y registrar en historial
+  PUT    /api/mecanicos/{id}/taller/{usuario_id}/estado   → activar / desactivar mecánico
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from typing import Optional
@@ -10,6 +26,7 @@ from email_utils import enviar_correo_trabajo_finalizado
 router = APIRouter()
 
 
+# ── Modelos de datos ──────────────────────────────────────────────────────────
 class MecanicoData(BaseModel):
     nombre: str
     email: EmailStr
@@ -38,10 +55,12 @@ class RevisionTrabajoData(BaseModel):
     trabajo_requerido: str
 
 
+# ── Helper: hashea contraseña con SHA-256 ────────────────────────────────────
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+# ── Helper: obtiene el taller_id a partir del usuario_id del admin ────────────
 def _get_taller_id(cur, usuario_id: int):
     cur.execute("SELECT id FROM talleres WHERE admin_id = %s", (usuario_id,))
     taller = cur.fetchone()
@@ -50,6 +69,7 @@ def _get_taller_id(cur, usuario_id: int):
     return taller["id"]
 
 
+# ── Listar mecánicos del taller ───────────────────────────────────────────────
 @router.get("/taller/{usuario_id}", summary="Listar mecánicos de un taller")
 def get_mecanicos_taller(usuario_id: int):
     conn = get_connection()
@@ -75,6 +95,7 @@ def get_mecanicos_taller(usuario_id: int):
         conn.close()
 
 
+# ── Registrar mecánico nuevo en el taller ────────────────────────────────────
 @router.post("/taller/{usuario_id}", summary="Registrar mecánico en un taller")
 def create_mecanico(usuario_id: int, data: MecanicoData):
     nombre = data.nombre.strip()
@@ -114,6 +135,7 @@ def create_mecanico(usuario_id: int, data: MecanicoData):
         conn.close()
 
 
+# ── Actualizar datos del mecánico (nombre, email, teléfono, especialidad) ─────
 @router.put("/{mecanico_id}/taller/{usuario_id}", summary="Actualizar mecánico de un taller")
 def update_mecanico(mecanico_id: int, usuario_id: int, data: MecanicoData):
     nombre = data.nombre.strip()
@@ -158,6 +180,7 @@ def update_mecanico(mecanico_id: int, usuario_id: int, data: MecanicoData):
         conn.close()
 
 
+# ── Login del mecánico fase 1 (también soporta MFA) ──────────────────────────
 @router.post("/login", summary="Iniciar sesión como mecánico")
 def login_mecanico(data: MecanicoLogin):
     conn = get_connection()
@@ -207,6 +230,7 @@ def login_mecanico(data: MecanicoLogin):
         conn.close()
 
 
+# ── Cambiar contraseña del mecánico ──────────────────────────────────────────
 @router.put("/{mecanico_id}/taller/{usuario_id}/password", summary="Cambiar contraseña de un mecánico")
 def cambiar_password_mecanico(mecanico_id: int, usuario_id: int, data: MecanicoPasswordData):
     if len(data.password) < 6:
@@ -239,6 +263,7 @@ def cambiar_password_mecanico(mecanico_id: int, usuario_id: int, data: MecanicoP
         conn.close()
 
 
+# ── Eliminar mecánico (solo si no tiene citas asociadas, si tiene → desactivar) ─
 @router.delete("/{mecanico_id}/taller/{usuario_id}", summary="Eliminar mecánico de un taller")
 def delete_mecanico(mecanico_id: int, usuario_id: int):
     conn = get_connection()
@@ -272,6 +297,7 @@ def delete_mecanico(mecanico_id: int, usuario_id: int):
         conn.close()
 
 
+# ── Citas asignadas al mecánico (vista del panel mecánico) ───────────────────
 @router.get("/{mecanico_id}/citas", summary="Citas asignadas a un mecánico")
 def get_citas_mecanico(mecanico_id: int):
     conn = get_connection()
@@ -303,6 +329,7 @@ def get_citas_mecanico(mecanico_id: int):
         conn.close()
 
 
+# ── Guardar diagnóstico inicial: tiempo estimado y trabajo requerido ──────────
 @router.put("/{mecanico_id}/citas/{cita_id}/revision", summary="Guardar revisión inicial del mecánico")
 def guardar_revision_mecanico(mecanico_id: int, cita_id: int, data: RevisionTrabajoData):
     # Este apartado permite que el mecánico registre el diagnóstico antes de cerrar el trabajo.
@@ -348,6 +375,7 @@ def guardar_revision_mecanico(mecanico_id: int, cita_id: int, data: RevisionTrab
         conn.close()
 
 
+# ── Cerrar trabajo: registra en historial, cambia cita a 'completada' y notifica al cliente ─
 @router.put("/{mecanico_id}/citas/{cita_id}/terminar", summary="Marcar trabajo asignado como terminado")
 def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajoData):
     if data.costo_final is not None and data.costo_final < 0:
@@ -448,6 +476,7 @@ def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajo
         conn.close()
 
 
+# ── Activar o desactivar mecánico (sin eliminarlo) ───────────────────────────
 @router.put("/{mecanico_id}/taller/{usuario_id}/estado", summary="Activar o desactivar mecánico")
 def cambiar_estado_mecanico(mecanico_id: int, usuario_id: int, activo: bool):
     conn = get_connection()

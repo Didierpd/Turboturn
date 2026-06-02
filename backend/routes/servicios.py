@@ -1,3 +1,15 @@
+"""
+routes/servicios.py
+Catálogo de servicios ofrecidos por cada taller.
+
+  GET    /api/servicios/taller-usuario/{usuario_id}      → servicios del taller (por usuario admin)
+  DELETE /api/servicios/{id}/taller-usuario/{usuario_id} → eliminar servicio (no si tiene historial)
+  GET    /api/servicios/taller/{taller_id}               → servicios del taller (por ID de taller)
+  GET    /api/servicios/                                 → todos los servicios de todos los talleres
+  POST   /api/servicios/                                 → crear servicio para un taller
+  PUT    /api/servicios/{id}/taller-usuario/{usuario_id} → actualizar nombre, precio, etc.
+"""
+
 from fastapi import APIRouter, HTTPException
 import psycopg2.extras
 from database import get_connection
@@ -7,6 +19,7 @@ from typing import Optional
 router = APIRouter()
 
 
+# ── Helper: obtiene taller_id a partir del usuario_id del admin ──────────────
 def _get_taller_id(cur, usuario_id: int):
     cur.execute("SELECT id FROM talleres WHERE admin_id = %s", (usuario_id,))
     taller = cur.fetchone()
@@ -15,6 +28,7 @@ def _get_taller_id(cur, usuario_id: int):
     return taller["id"]
 
 
+# ── Servicios del taller usando el usuario_id del admin (panel taller) ────────
 @router.get("/taller-usuario/{usuario_id}", summary="Obtener servicios del taller por usuario taller")
 def get_servicios_taller_usuario(usuario_id: int):
     conn = get_connection()
@@ -40,6 +54,7 @@ def get_servicios_taller_usuario(usuario_id: int):
         conn.close()
 
 
+# ── Eliminar servicio (bloqueado si ya aparece en historial de clientes) ──────
 @router.delete("/{servicio_id}/taller-usuario/{usuario_id}", summary="Eliminar servicio de un taller")
 def delete_servicio_taller(servicio_id: int, usuario_id: int):
     conn = get_connection()
@@ -73,6 +88,7 @@ def delete_servicio_taller(servicio_id: int, usuario_id: int):
         conn.close()
 
 
+# ── Servicios del taller usando el taller_id directo (usado al reservar cita) ─
 @router.get("/taller/{taller_id}", summary="Obtener servicios de un taller")
 def get_servicios_taller(taller_id: int):
     conn = get_connection()
@@ -95,6 +111,7 @@ def get_servicios_taller(taller_id: int):
         conn.close()
 
 
+# ── Todos los servicios de todos los talleres ─────────────────────────────────
 @router.get("/", summary="Obtener todos los servicios disponibles")
 def get_servicios():
     conn = get_connection()
@@ -114,6 +131,7 @@ def get_servicios():
         cur.close()
         conn.close()
 
+# ── Modelo y validador para crear/actualizar servicios ────────────────────────
 class ServicioData(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
@@ -136,6 +154,7 @@ def _validar_servicio(data: ServicioData):
     }
 
 
+# ── Crear servicio nuevo para el taller ──────────────────────────────────────
 @router.post("/", summary="Crear servicio para un taller")
 def create_servicio(data: ServicioData):
     conn = get_connection()
@@ -160,6 +179,7 @@ def create_servicio(data: ServicioData):
         conn.close()
 
 
+# ── Actualizar servicio existente (nombre, precio, descripción, tiempo) ───────
 @router.put("/{servicio_id}/taller-usuario/{usuario_id}", summary="Actualizar servicio de un taller")
 def update_servicio_taller(servicio_id: int, usuario_id: int, data: ServicioData):
     conn = get_connection()

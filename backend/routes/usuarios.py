@@ -27,6 +27,7 @@ from email_utils import generar_codigo, enviar_correo_verificacion
 router = APIRouter()
 
 
+# ── Modelos de datos ──────────────────────────────────────────────────────────
 class UsuarioRegistro(BaseModel):
     nombre: str
     email: EmailStr
@@ -35,16 +36,20 @@ class UsuarioRegistro(BaseModel):
     rol: Optional[str] = "usuario"
     nombre_taller: Optional[str] = None
     direccion_taller: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
 
 class UsuarioLogin(BaseModel):
     email: EmailStr
     password: str
 
 
+# ── Helper: hashea la contraseña con SHA-256 ─────────────────────────────────
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+# ── Registro: guarda datos temporalmente y envía código de verificación por correo ─
 @router.post("/registro", summary="Registrar nuevo usuario")
 def registro(data: UsuarioRegistro):
     conn = get_connection()
@@ -66,6 +71,8 @@ def registro(data: UsuarioRegistro):
             "rol": data.rol,
             "nombre_taller": data.nombre_taller,
             "direccion_taller": data.direccion_taller,
+            "latitud": data.latitud,
+            "longitud": data.longitud,
         }
         codigo = generar_codigo()
         cur.execute(
@@ -91,6 +98,7 @@ def registro(data: UsuarioRegistro):
         conn.close()
 
 
+# ── Login fase 1: valida email + contraseña (si tiene MFA, devuelve mfa_requerido: true) ─
 @router.post("/login", summary="Iniciar sesión (fase 1 de 2 si MFA está activo)")
 def login(data: UsuarioLogin):
     conn = get_connection()
@@ -98,7 +106,7 @@ def login(data: UsuarioLogin):
     try:
         hashed = _hash_password(data.password)
         cur.execute(
-            "SELECT id, nombre, email, telefono, rol, mfa_habilitado, contrasena FROM usuarios WHERE email = %s",
+            "SELECT id, nombre, email, telefono, rol, estado, mfa_habilitado, contrasena FROM usuarios WHERE email = %s",
             (data.email,),
         )
         usuario = cur.fetchone()
@@ -141,6 +149,9 @@ def login(data: UsuarioLogin):
                 "usuario": mecanico,
             }
 
+        if usuario["estado"] != "activo":
+            raise HTTPException(status_code=403, detail="Tu cuenta está restringida o pendiente de aprobación.")
+
         if usuario["contrasena"] != hashed:
             raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
 
@@ -169,6 +180,7 @@ def login(data: UsuarioLogin):
         conn.close()
 
 
+# ── Talleres pendientes de aprobación (panel admin) ──────────────────────────
 @router.get("/talleres-pendientes", summary="Listar talleres pendientes de aprobación")
 def talleres_pendientes():
     conn = get_connection()
@@ -185,6 +197,7 @@ def talleres_pendientes():
         conn.close()
 
 
+# ── Listar todos los usuarios (panel admin → gestión de cuentas) ─────────────
 @router.get("/todos", summary="Listar todos los usuarios")
 def todos_usuarios():
     conn = get_connection()
@@ -199,6 +212,7 @@ def todos_usuarios():
         conn.close()
 
 
+# ── Aprobar taller: cambia estado a 'activo' ─────────────────────────────────
 @router.put("/{usuario_id}/aprobar", summary="Aprobar taller")
 def aprobar_taller(usuario_id: int):
     conn = get_connection()
@@ -215,6 +229,7 @@ def aprobar_taller(usuario_id: int):
         conn.close()
 
 
+# ── Rechazar taller: cambia estado a 'rechazado' ─────────────────────────────
 @router.put("/{usuario_id}/rechazar", summary="Rechazar taller")
 def rechazar_taller(usuario_id: int):
     conn = get_connection()
@@ -231,6 +246,58 @@ def rechazar_taller(usuario_id: int):
         conn.close()
 
 
+# ── Activar usuario (admin desbloquea una cuenta restringida) ────────────────
+@router.put("/{usuario_id}/activar", summary="Activar usuario")
+def activar_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE usuarios SET estado = 'activo' WHERE id = %s", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Usuario activado."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── Restringir usuario: bloquea el acceso sin eliminar la cuenta ──────────────
+@router.put("/{usuario_id}/restringir", summary="Restringir usuario")
+def restringir_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE usuarios SET estado = 'pendiente' WHERE id = %s", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Usuario restringido."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── Eliminar usuario permanentemente ─────────────────────────────────────────
+@router.delete("/{usuario_id}/eliminar", summary="Eliminar usuario")
+def eliminar_usuario(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM usuarios WHERE id = %s", (usuario_id,))
+        conn.commit()
+        return {"mensaje": "Usuario eliminado."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── Verificar código de registro: confirma el correo y crea la cuenta ─────────
 class VerificarCodigoRequest(BaseModel):
     email: EmailStr
     codigo: str
@@ -278,10 +345,10 @@ def verificar_codigo(data: VerificarCodigoRequest):
         if datos.get("rol") == "taller" and datos.get("nombre_taller") and datos.get("direccion_taller"):
             cur.execute(
                 """
-                INSERT INTO talleres (nombre, direccion, admin_id)
-                VALUES (%s, %s, %s)
+                INSERT INTO talleres (nombre, direccion, admin_id, latitud, longitud)
+                VALUES (%s, %s, %s, %s, %s)
                 """,
-                (datos["nombre_taller"], datos["direccion_taller"], nuevo["id"]),
+                (datos["nombre_taller"], datos["direccion_taller"], nuevo["id"], datos.get("latitud"), datos.get("longitud")),
             )
 
         cur.execute("UPDATE codigos_verificacion SET usado = TRUE WHERE id = %s", (row["id"],))
@@ -299,6 +366,7 @@ def verificar_codigo(data: VerificarCodigoRequest):
         conn.close()
 
 
+# ── Obtener perfil de un usuario por ID ──────────────────────────────────────
 @router.get("/{usuario_id}", summary="Obtener datos de un usuario")
 def get_usuario(usuario_id: int):
     conn = get_connection()

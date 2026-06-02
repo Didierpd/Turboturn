@@ -1,3 +1,12 @@
+"""
+routes/vehiculos.py
+Vehículos registrados por los clientes.
+
+  GET    /api/vehiculos/{usuario_id}  → vehículos del usuario
+  POST   /api/vehiculos/              → registrar vehículo nuevo
+  DELETE /api/vehiculos/{id}          → eliminar vehículo (solo si no tiene citas asociadas)
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -7,6 +16,7 @@ from database import get_connection
 router = APIRouter()
 
 
+# ── Modelo de datos para registrar un vehículo ───────────────────────────────
 class VehiculoData(BaseModel):
     usuario_id: int
     tipo_vehiculo: str
@@ -16,6 +26,7 @@ class VehiculoData(BaseModel):
     color: Optional[str] = None
 
 
+# ── Vehículos del cliente ─────────────────────────────────────────────────────
 @router.get("/{usuario_id}", summary="Obtener vehículos de un usuario")
 def get_vehiculos(usuario_id: int):
     conn = get_connection()
@@ -30,6 +41,7 @@ def get_vehiculos(usuario_id: int):
         conn.close()
 
 
+# ── Registrar vehículo nuevo para un cliente ──────────────────────────────────
 @router.post("/", summary="Registrar un nuevo vehículo")
 def create_vehiculo(data: VehiculoData):
     conn = get_connection()
@@ -50,6 +62,7 @@ def create_vehiculo(data: VehiculoData):
         conn.close()
 
 
+# ── Eliminar vehículo (bloqueado si ya tiene citas asociadas) ─────────────────
 @router.delete("/{vehiculo_id}", summary="Eliminar un vehículo")
 def delete_vehiculo(vehiculo_id: int, usuario_id: int):
     conn = get_connection()

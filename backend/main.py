@@ -1,3 +1,21 @@
+"""
+main.py
+Punto de entrada de la aplicación TurboTurn.
+
+Routers montados bajo /api/*:
+  /api/usuarios   → registro, login (con MFA), gestión de cuentas
+  /api/vehiculos  → vehículos de los clientes
+  /api/citas      → reservas, estados y facturación
+  /api/servicios  → catálogo de servicios por taller
+  /api/historial  → historial de trabajos del cliente
+  /api/mfa        → configuración y validación TOTP
+  /api/mecanicos  → gestión de mecánicos y flujo de trabajo
+
+El frontend estático (HTML/CSS/JS) se sirve desde /frontend desde la raíz /.
+Middlewares: CORS (todos los orígenes), GZip (respuestas > 1 KB),
+Cache-Control no-store en rutas de API y archivos estáticos.
+"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -9,12 +27,14 @@ import os
 from database import get_connection
 from routes import usuarios, vehiculos, citas, servicios, historial, mfa, mecanicos   # ← mfa agregado
 
+# ── Inicialización de la app ──────────────────────────────────────────────────
 app = FastAPI(
     title="TurboTurn API",
     description="Sistema de gestión de turnos para talleres mecánicos",
     version="1.0.0",
 )
 
+# ── Middlewares ───────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,6 +45,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
+# ── Evento de arranque: precalienta la conexión a RDS ────────────────────────
 @app.on_event("startup")
 def warm_database_connection():
     # Abre la conexión a RDS al iniciar para que el primer login no pague esa espera.
@@ -44,6 +65,7 @@ def warm_database_connection():
             conn.close()
 
 
+# ── Middleware: desactiva caché del navegador en rutas API y archivos estáticos ─
 @app.middleware("http")
 async def add_cache_control_headers(request, call_next):
     response = await call_next(request)
@@ -58,6 +80,7 @@ async def add_cache_control_headers(request, call_next):
 
     return response
 
+# ── Registro de routers ───────────────────────────────────────────────────────
 app.include_router(usuarios.router,  prefix="/api/usuarios",  tags=["Usuarios"])
 app.include_router(vehiculos.router, prefix="/api/vehiculos", tags=["Vehículos"])
 app.include_router(citas.router,     prefix="/api/citas",     tags=["Citas"])
@@ -66,6 +89,7 @@ app.include_router(historial.router, prefix="/api/historial", tags=["Historial"]
 app.include_router(mfa.router,       prefix="/api/mfa",       tags=["MFA"])   # ← nuevo
 app.include_router(mecanicos.router, prefix="/api/mecanicos", tags=["Mecánicos"])
 
+# ── Frontend estático servido desde la raíz ───────────────────────────────────
 frontend_path = os.path.join(os.path.dirname(__file__), "../frontend")
 
 
