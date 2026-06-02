@@ -181,23 +181,43 @@ function activarFormularioCitas() {
   cargarTalleresEnSelect();
   cargarVehiculosEnSelect();
 
-  document.getElementById("taller").addEventListener("change", function() {
+  document.getElementById("taller").addEventListener("change", async function() {
     const tallerId = this.value;
     const grupo = document.getElementById("servicioGroup");
     const select = document.getElementById("servicio");
+
     if (!tallerId) {
       grupo.style.display = "none";
-      select.innerHTML = '<option value="">Revisión general (sin servicio específico)</option>';
+      select.disabled = false;
+      select.innerHTML = '<option value="">Selecciona primero un taller</option>';
       return;
     }
-    fetch("/api/servicios/taller/" + tallerId)
-      .then(r => r.json())
-      .then(servicios => {
-        grupo.style.display = "block";
-        select.innerHTML = '<option value="">Revisión general (sin servicio específico)</option>' +
-          servicios.map(s => '<option value="' + s.id + '">' + s.nombre + ' — $' + Number(s.precio).toLocaleString("es-CO") + '</option>').join("");
-      })
-      .catch(() => { grupo.style.display = "none"; });
+
+    grupo.style.display = "block";
+    select.disabled = true;
+    select.innerHTML = '<option value="">Cargando servicios del taller...</option>';
+
+    try {
+      const res = await fetch("/api/servicios/taller/" + tallerId);
+      if (!res.ok) throw new Error("No se pudieron cargar los servicios");
+
+      const servicios = await res.json();
+      select.disabled = false;
+
+      if (!servicios.length) {
+        select.innerHTML = '<option value="">Revisión general (este taller no tiene servicios publicados)</option>';
+        return;
+      }
+
+      select.innerHTML = '<option value="">Selecciona un servicio o revisión general</option>' +
+        servicios.map(s => {
+          const precio = Number(s.precio || 0).toLocaleString("es-CO");
+          return '<option value="' + s.id + '">' + s.nombre + ' — $' + precio + '</option>';
+        }).join("");
+    } catch (err) {
+      select.disabled = false;
+      select.innerHTML = '<option value="">No se pudieron cargar los servicios</option>';
+    }
   });
 
     form.addEventListener("submit", async function (e) {

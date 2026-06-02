@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mapa de talleres - TurboTurn</title>
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
@@ -14,9 +15,8 @@
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
         <a href="./pantalladeInicio.html?v=10">Inicio</a>
-        <a href="./citas.html">Citas</a>
-        <a href="./vehiculos.html">Vehículos</a>
-        <a href="./servicios.html">Servicios</a>
+        <a href="./citas.html">Reservar cita</a>
+        <a href="./vehiculos.html">Mis vehículos</a>
         <a class="active" href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
@@ -77,7 +77,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="../js/app.js?v=10"></script>
+  <script src="../js/app.js?v=11"></script>
   <script src="../js/mapa-talleres.js?v=10"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));

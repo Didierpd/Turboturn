@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Taller - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
@@ -29,18 +30,39 @@
         <p style="color:#64748b;">Gestiona tu agenda, citas, clientes y mecánicos.</p>
       </div>
 
-      <div class="grid" style="margin-bottom:20px;">
-        <div class="info-box">
-          <h3>Citas de hoy</h3>
-          <p id="citasHoy" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
+      <div id="agendaStatsPanel">
+        <div class="grid" style="margin-bottom:20px;">
+          <div class="info-box">
+            <h3>Citas de hoy</h3>
+            <p id="citasHoy" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
+          </div>
+          <div class="info-box">
+            <h3>Pendientes</h3>
+            <p id="citasPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
+          </div>
+          <div class="info-box">
+            <h3>Completadas</h3>
+            <p id="citasCompletadas" style="font-size:2rem;font-weight:bold;color:#16a34a;">-</p>
+          </div>
         </div>
-        <div class="info-box">
-          <h3>Pendientes</h3>
-          <p id="citasPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
-        </div>
-        <div class="info-box">
-          <h3>Completadas</h3>
-          <p id="citasCompletadas" style="font-size:2rem;font-weight:bold;color:#16a34a;">-</p>
+
+        <div class="stats-grid">
+          <div class="chart-card">
+            <h3>Citas por estado</h3>
+            <div id="tallerCitasEstadoChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Servicios más solicitados</h3>
+            <div id="tallerServiciosChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Clientes registrados por mes</h3>
+            <div id="tallerClientesMesChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Mecánicos con más citas</h3>
+            <div id="tallerMecanicosChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
         </div>
       </div>
 
@@ -253,8 +275,8 @@
     </footer>
   </div>
 
-  <script src="../js/app.js?v=10"></script>
-  <script src="../js/taller.js?v=16"></script>
+  <script src="../js/app.js?v=11"></script>
+  <script src="../js/taller.js?v=18"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "taller") { window.location.href = "./login.html"; }
@@ -269,6 +291,7 @@
     function mostrarTab(tab) {
       document.querySelectorAll(".tab-section").forEach(s => s.style.display = "none");
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("agendaStatsPanel").style.display = tab === "agenda" ? "block" : "none";
       document.getElementById("tab-" + tab).style.display = "block";
       document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add("active");
 
@@ -287,6 +310,7 @@
     });
 
     cargarAgendaHoy();
+    cargarEstadisticasTaller();
     activarFormularioMecanicos();
     activarFormularioServicios();
   </script>

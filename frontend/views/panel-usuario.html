@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Usuario - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
@@ -15,7 +17,7 @@
         <a class="active" href="./panel-usuario.html">Inicio</a>
         <a href="./citas.html">Reservar cita</a>
         <a href="./vehiculos.html">Mis vehículos</a>
-        <a href="./servicios.html">Servicios</a>
+        <a href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
@@ -41,12 +43,6 @@
             <p>Registra y consulta tus vehículos.</p>
           </div>
         </a>
-        <a href="./servicios.html" style="text-decoration:none;">
-          <div class="info-box">
-            <h3>Servicios disponibles</h3>
-            <p>Consulta los servicios y precios del taller.</p>
-          </div>
-        </a>
         <a href="./mapa-talleres.html" style="text-decoration:none;">
           <div class="info-box">
             <h3>Mapa de talleres</h3>
@@ -59,6 +55,14 @@
             <p>Revisa el historial de mantenimientos de tus vehículos.</p>
           </div>
         </a>
+      </div>
+
+      <div class="card home-map-card">
+        <h2>Talleres activos cerca de ti</h2>
+        <p id="mapaEstado" style="color:#64748b;margin-bottom:14px;">Cargando talleres activos...</p>
+        <div class="map-panel home-map-panel">
+          <div id="mapaTalleres"></div>
+        </div>
       </div>
  
       <!-- ══════════════════════════════════════════ -->
@@ -224,7 +228,9 @@
     </footer>
   </div>
  
-  <script src="../js/app.js?v=10"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/app.js?v=11"></script>
+  <script src="../js/mapa-talleres.js?v=10"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }

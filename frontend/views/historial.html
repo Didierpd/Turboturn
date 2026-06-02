@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Historial - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css?v=15" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
@@ -13,9 +14,8 @@
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
         <a href="./pantalladeInicio.html?v=10">Inicio</a>
-        <a href="./citas.html">Citas</a>
-        <a href="./vehiculos.html">Vehículos</a>
-        <a href="./servicios.html">Servicios</a>
+        <a href="./citas.html">Reservar cita</a>
+        <a href="./vehiculos.html">Mis vehículos</a>
         <a href="./mapa-talleres.html">Mapa</a>
         <a class="active" href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
@@ -79,7 +79,7 @@
     </footer>
   </div>
 
-  <script src="../js/app.js?v=10"></script>
+  <script src="../js/app.js?v=11"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
