@@ -18,6 +18,7 @@ let trabajosCache = [];
 let serviciosCache = [];
 
 // ── Bloque UI compartida: mensajes temporales y datos del mecánico actual ────
+// ── UI compartida: muestra alertas temporales en el panel ────────────────────
 function mostrarMensaje(id, mensaje, tipo = "success") {
   const alertBox = document.getElementById(id);
   if (!alertBox) return;
@@ -31,11 +32,13 @@ function mostrarMensaje(id, mensaje, tipo = "success") {
   }, 3000);
 }
 
+// ── Helper: obtiene los datos del mecánico desde localStorage ────────────────
 function mecanicoActual() {
   return JSON.parse(localStorage.getItem("usuario"));
 }
 
 // ── Bloque formato: fechas y limpieza de texto para pintar tablas ────────────
+// ── Helpers de formato: fechas, texto HTML y pesos colombianos ───────────────
 function formatoFechaTrabajo(fechaHora) {
   return new Date(fechaHora).toLocaleString("es-CO", {
     dateStyle: "short",
@@ -87,8 +90,8 @@ function etapaTrabajo(cita) {
 
   return {
     clave: "pendiente_revision",
-    texto: "Pendiente de revisión",
-    detalle: "Primero registra el tiempo estimado y qué toca realizar.",
+    texto: "En proceso",
+    detalle: "Puedes registrar una revisión o finalizar el trabajo directamente.",
   };
 }
 
@@ -105,16 +108,15 @@ function botonTrabajo(cita) {
       <button onclick="abrirFormularioRevision(${cita.id})" class="btn-submit mechanic-action-primary">
         ${tieneRevision ? "Editar revisión" : "Registrar revisión"}
       </button>
-      ${tieneRevision ? `
-        <button onclick="abrirFormularioFinalizacion(${cita.id})" class="btn-submit mechanic-action-success">
-          Finalizar trabajo
-        </button>
-      ` : ""}
+      <button onclick="abrirFormularioFinalizacion(${cita.id})" class="btn-submit mechanic-action-success">
+        Finalizar trabajo
+      </button>
     </div>
   `;
 }
 
 // ── Bloque revisión: muestra resumen de diagnóstico ya registrado ────────────
+// ── Bloque revisión: muestra resumen del diagnóstico registrado en tabla ──────
 function resumenRevision(cita) {
   // Muestra en la tabla lo que el mecánico ya reportó después de revisar el vehículo.
   if (!cita.tiempo_estimado_revision && !cita.trabajo_requerido && !cita.costo_estimado_revision) {
@@ -131,6 +133,7 @@ function resumenRevision(cita) {
 }
 
 // ── Bloque contadores: métricas rápidas del panel mecánico ───────────────────
+// ── Contadores: actualiza las métricas rápidas del panel ─────────────────────
 function actualizarContadoresTrabajos(citas) {
   const asignadas = citas.length;
   const pendientes = citas.filter(c => etapaTrabajo(c).clave === "pendiente_revision").length;
@@ -144,6 +147,7 @@ function actualizarContadoresTrabajos(citas) {
 }
 
 // ── Bloque trabajos: carga y pinta las citas asignadas al mecánico ───────────
+// ── Cargar trabajos: trae y pinta las citas asignadas al mecánico ─────────────
 async function cargarTrabajosMecanico() {
   const tbody = document.getElementById("trabajosBody");
   if (!tbody) return;
@@ -188,6 +192,7 @@ async function cargarTrabajosMecanico() {
 }
 
 // ── Bloque formulario revisión: abre/cierra y guarda diagnóstico inicial ─────
+// ── Formulario revisión: abre, precarga y guarda el diagnóstico inicial ───────
 function abrirFormularioRevision(citaId) {
   const cita = trabajosCache.find(c => Number(c.id) === Number(citaId));
   if (!cita) return;
@@ -277,6 +282,7 @@ async function guardarRevisionTrabajo(citaId, datos) {
 }
 
 // ── Bloque servicios: carga servicios del taller para finalizar trabajos ─────
+// ── Servicios: carga el catálogo del taller para el formulario de finalización ─
 async function cargarServiciosMecanico() {
   const mecanico = mecanicoActual();
   const select = document.getElementById("servicioRealizado");
@@ -303,14 +309,24 @@ async function cargarServiciosMecanico() {
 }
 
 // ── Bloque formulario finalización: abre/cierra y valida cierre de trabajo ───
-function abrirFormularioFinalizacion(citaId) {
+// ── Formulario finalización: abre con servicio y precio preseleccionados ──────
+async function abrirFormularioFinalizacion(citaId) {
   const cita = trabajosCache.find(c => Number(c.id) === Number(citaId));
   if (!cita) return;
 
   document.getElementById("finalizarCitaId").value = citaId;
   document.getElementById("observacionesFinales").value = cita.notas || "";
-  document.getElementById("costoFinal").value = "";
-  document.getElementById("servicioRealizado").value = "";
+
+  await cargarServiciosMecanico();
+
+  // Preselecciona el servicio y el precio si el cliente ya lo eligió al reservar
+  if (cita.servicio_id) {
+    document.getElementById("servicioRealizado").value = cita.servicio_id;
+    document.getElementById("costoFinal").value = cita.servicio_precio || "";
+  } else {
+    document.getElementById("costoFinal").value = "";
+    document.getElementById("servicioRealizado").value = "";
+  }
 
   const card = document.getElementById("finalizarTrabajoCard");
   card.style.display = "block";
@@ -322,12 +338,11 @@ function cerrarFormularioFinalizacion() {
   document.getElementById("finalizarTrabajoCard").style.display = "none";
 }
 
+// ── Activar formulario finalización: valida campos y envía al backend ─────────
 function activarFormularioFinalizacion() {
   const form = document.getElementById("finalizarTrabajoForm");
   const servicioSelect = document.getElementById("servicioRealizado");
   if (!form || !servicioSelect) return;
-
-  cargarServiciosMecanico();
 
   servicioSelect.addEventListener("change", function () {
     const precio = this.selectedOptions[0]?.dataset.precio;
@@ -363,6 +378,7 @@ function activarFormularioFinalizacion() {
 }
 
 // ── Bloque cierre: marca el trabajo como terminado y notifica al cliente ─────
+// ── Terminar trabajo: marca como completada, guarda historial y envía factura ─
 async function terminarTrabajo(citaId, datos) {
   const mecanico = mecanicoActual();
   try {

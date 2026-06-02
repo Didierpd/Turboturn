@@ -79,7 +79,7 @@ def delete_vehiculo(vehiculo_id: int, usuario_id: int):
         if cur.fetchone():
             raise HTTPException(
                 status_code=400,
-                detail="No puedes eliminar este vehículo porque ya tiene citas asociadas.",
+                detail="No puedes eliminar este vehículo porque tiene citas registradas. Forma parte del historial de servicios.",
             )
 
         cur.execute("DELETE FROM vehiculos WHERE id = %s RETURNING id", (vehiculo_id,))

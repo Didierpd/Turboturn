@@ -13,7 +13,7 @@ Gestión completa de citas entre clientes y talleres.
   POST /api/citas/{id}/factura                  → generar PDF y enviarlo al correo del cliente
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import psycopg2.extras
@@ -290,6 +290,7 @@ def get_citas_taller(usuario_id: int):
 def cambiar_estado_cita(
     cita_id: int,
     estado: str,
+    background_tasks: BackgroundTasks,
     mecanico_id: Optional[int] = None,
     motivo_cancelacion: Optional[str] = None,
 ):
@@ -376,50 +377,40 @@ def cambiar_estado_cita(
             raise HTTPException(status_code=404, detail="Cita no encontrada")
         conn.commit()
 
-        correo_enviado = None
         if estado == "cancelada" and datos_cancelacion:
-            try:
-                enviar_correo_cancelacion_cita(
-                    email_destino=datos_cancelacion["cliente_email"],
-                    cliente=datos_cancelacion["cliente"],
-                    taller=datos_cancelacion["taller"],
-                    fecha_hora=str(datos_cancelacion["fecha_hora"]),
-                    vehiculo=f"{datos_cancelacion['tipo_vehiculo']} {datos_cancelacion['marca']} ({datos_cancelacion['placa']})",
-                    motivo=motivo_cancelacion.strip(),
-                )
-                correo_enviado = True
-            except Exception:
-                # La cita queda cancelada aunque el proveedor de correo falle.
-                return {
-                    "mensaje": "Cita cancelada, pero no se pudo enviar el correo al cliente.",
-                    "correo_enviado": False,
-                }
+            background_tasks.add_task(
+                enviar_correo_cancelacion_cita,
+                email_destino=datos_cancelacion["cliente_email"],
+                cliente=datos_cancelacion["cliente"],
+                taller=datos_cancelacion["taller"],
+                fecha_hora=str(datos_cancelacion["fecha_hora"]),
+                vehiculo=f"{datos_cancelacion['tipo_vehiculo']} {datos_cancelacion['marca']} ({datos_cancelacion['placa']})",
+                motivo=motivo_cancelacion.strip(),
+            )
 
         if estado == "confirmada" and datos_confirmacion:
-            correo_enviado = True
             vehiculo = f"{datos_confirmacion['tipo_vehiculo']} {datos_confirmacion['marca']} ({datos_confirmacion['placa']})"
-            try:
-                enviar_correo_cita_confirmada(
-                    email_destino=datos_confirmacion["cliente_email"],
+            background_tasks.add_task(
+                enviar_correo_cita_confirmada,
+                email_destino=datos_confirmacion["cliente_email"],
+                cliente=datos_confirmacion["cliente"],
+                taller=datos_confirmacion["taller"],
+                fecha_hora=str(datos_confirmacion["fecha_hora"]),
+                vehiculo=vehiculo,
+                mecanico=datos_confirmacion["mecanico"],
+            )
+            if datos_confirmacion["mecanico_email"]:
+                background_tasks.add_task(
+                    enviar_correo_mecanico_asignado,
+                    email_destino=datos_confirmacion["mecanico_email"],
+                    mecanico=datos_confirmacion["mecanico"],
                     cliente=datos_confirmacion["cliente"],
                     taller=datos_confirmacion["taller"],
                     fecha_hora=str(datos_confirmacion["fecha_hora"]),
                     vehiculo=vehiculo,
-                    mecanico=datos_confirmacion["mecanico"],
                 )
-                if datos_confirmacion["mecanico_email"]:
-                    enviar_correo_mecanico_asignado(
-                        email_destino=datos_confirmacion["mecanico_email"],
-                        mecanico=datos_confirmacion["mecanico"],
-                        cliente=datos_confirmacion["cliente"],
-                        taller=datos_confirmacion["taller"],
-                        fecha_hora=str(datos_confirmacion["fecha_hora"]),
-                        vehiculo=vehiculo,
-                    )
-            except Exception:
-                correo_enviado = False
 
-        return {"mensaje": f"Cita actualizada a {estado}", "correo_enviado": correo_enviado}
+        return {"mensaje": f"Cita actualizada a {estado}", "correo_enviado": True}
     except HTTPException:
         raise
     except Exception:

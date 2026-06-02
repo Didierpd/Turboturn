@@ -14,14 +14,16 @@ Gestión de mecánicos por taller y flujo de trabajo de citas asignadas.
   PUT    /api/mecanicos/{id}/taller/{usuario_id}/estado   → activar / desactivar mecánico
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import psycopg2.extras
 import hashlib
 
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+
 from database import get_connection
-from email_utils import enviar_correo_revision_mecanico, enviar_correo_trabajo_finalizado
+from email_utils import enviar_correo_revision_mecanico, enviar_correo_trabajo_finalizado, enviar_factura_pdf
 
 router = APIRouter()
 
@@ -68,6 +70,29 @@ def _get_taller_id(cur, usuario_id: int):
     if not taller:
         raise HTTPException(status_code=404, detail="Taller no encontrado para este usuario.")
     return taller["id"]
+
+
+# ── Listar todos los mecánicos (panel admin) ─────────────────────────────────
+@router.get("/todos", summary="Listar todos los mecánicos")
+def get_todos_mecanicos():
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT m.id, m.nombre, m.email, m.telefono, m.especialidad,
+                   m.activo, m.creado_en, t.nombre AS taller
+            FROM mecanicos m
+            JOIN talleres t ON m.taller_id = t.id
+            ORDER BY t.nombre, m.nombre
+            """
+        )
+        return [dict(row) for row in cur.fetchall()]
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener mecánicos")
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ── Listar mecánicos del taller ───────────────────────────────────────────────
@@ -308,14 +333,17 @@ def get_citas_mecanico(mecanico_id: int):
             """
             SELECT c.id, c.fecha_hora, c.estado, c.notas,
                    c.tiempo_estimado_revision, c.trabajo_requerido, c.costo_estimado_revision,
+                   c.servicio_id,
                    u.nombre AS cliente,
                    v.marca, v.placa, v.tipo_vehiculo,
-                   t.nombre AS taller
+                   t.nombre AS taller,
+                   s.nombre AS servicio_nombre, s.precio AS servicio_precio
             FROM citas c
             JOIN usuarios u ON c.usuario_id = u.id
             JOIN vehiculos v ON c.vehiculo_id = v.id
             JOIN talleres t ON c.taller_id = t.id
             JOIN mecanicos m ON c.mecanico_id = m.id
+            LEFT JOIN servicios s ON c.servicio_id = s.id
             WHERE c.mecanico_id = %s
               AND m.activo = TRUE
             ORDER BY c.fecha_hora DESC
@@ -409,7 +437,7 @@ def guardar_revision_mecanico(mecanico_id: int, cita_id: int, data: RevisionTrab
 
 # ── Cerrar trabajo: registra en historial, cambia cita a 'completada' y notifica al cliente ─
 @router.put("/{mecanico_id}/citas/{cita_id}/terminar", summary="Marcar trabajo asignado como terminado")
-def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajoData):
+def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajoData, background_tasks: BackgroundTasks):
     if data.costo_final is not None and data.costo_final < 0:
         raise HTTPException(status_code=400, detail="El costo final no puede ser negativo.")
 
@@ -418,14 +446,17 @@ def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajo
     try:
         cur.execute(
             """
-            SELECT c.id, c.taller_id, c.estado, c.fecha_hora,
-                   u.nombre AS cliente, u.email AS cliente_email,
-                   t.nombre AS taller,
+            SELECT c.id, c.taller_id, c.estado, c.fecha_hora, c.notas,
+                   u.nombre AS cliente_nombre, u.email AS cliente_email,
+                   t.nombre AS taller_nombre, t.direccion AS taller_direccion,
+                   t.telefono AS taller_telefono,
+                   ut.email AS taller_email,
                    v.tipo_vehiculo, v.marca, v.placa
             FROM citas c
             JOIN mecanicos m ON c.mecanico_id = m.id
             JOIN usuarios u ON c.usuario_id = u.id
             JOIN talleres t ON c.taller_id = t.id
+            JOIN usuarios ut ON t.admin_id = ut.id
             JOIN vehiculos v ON c.vehiculo_id = v.id
             WHERE c.id = %s
               AND c.mecanico_id = %s
@@ -482,22 +513,41 @@ def terminar_cita_mecanico(mecanico_id: int, cita_id: int, data: TerminarTrabajo
         )
         conn.commit()
 
-        correo_enviado = True
-        try:
-            enviar_correo_trabajo_finalizado(
-                email_destino=cita["cliente_email"],
-                cliente=cita["cliente"],
-                taller=cita["taller"],
-                fecha_hora=str(cita["fecha_hora"]),
-                vehiculo=f"{cita['tipo_vehiculo']} {cita['marca']} ({cita['placa']})",
-                servicio=servicio["nombre"],
-                costo_final=float(costo_final),
-                observaciones=observaciones,
-            )
-        except Exception:
-            correo_enviado = False
+        vehiculo = f"{cita['tipo_vehiculo']} {cita['marca']} ({cita['placa']})"
 
-        return {"mensaje": "Trabajo marcado como terminado.", "correo_enviado": correo_enviado}
+        background_tasks.add_task(
+            enviar_correo_trabajo_finalizado,
+            email_destino=cita["cliente_email"],
+            cliente=cita["cliente_nombre"],
+            taller=cita["taller_nombre"],
+            fecha_hora=str(cita["fecha_hora"]),
+            vehiculo=vehiculo,
+            servicio=servicio["nombre"],
+            costo_final=float(costo_final),
+            observaciones=observaciones,
+        )
+
+        background_tasks.add_task(
+            enviar_factura_pdf,
+            {
+                "id": cita_id,
+                "fecha_hora": cita["fecha_hora"],
+                "cliente_nombre": cita["cliente_nombre"],
+                "cliente_email": cita["cliente_email"],
+                "marca": cita["marca"],
+                "placa": cita["placa"],
+                "tipo_vehiculo": cita["tipo_vehiculo"],
+                "taller_nombre": cita["taller_nombre"],
+                "taller_direccion": cita["taller_direccion"],
+                "taller_telefono": cita["taller_telefono"],
+                "taller_email": cita["taller_email"],
+                "servicio_nombre": servicio["nombre"],
+                "servicio_precio": float(costo_final),
+                "notas": observaciones,
+            },
+        )
+
+        return {"mensaje": "Trabajo marcado como terminado.", "correo_enviado": True}
     except HTTPException:
         raise
     except Exception:

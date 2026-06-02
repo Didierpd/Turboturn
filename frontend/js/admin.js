@@ -138,6 +138,35 @@ async function eliminarUsuario(id) {
   }
 }
 
+// ── Bloque mecánicos: lista todos los mecánicos registrados en la plataforma ──
+async function cargarTodosMecanicos() {
+  const tbody = document.getElementById("mecanicosBody");
+  if (!tbody) return;
+
+  try {
+    const res = await fetch("/api/mecanicos/todos");
+    const mecanicos = await res.json();
+
+    if (mecanicos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#64748b;">No hay mecánicos registrados</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = mecanicos.map(m => `
+      <tr>
+        <td>${m.nombre}</td>
+        <td>${m.email}</td>
+        <td>${m.taller}</td>
+        <td>${m.especialidad || "-"}</td>
+        <td>${m.telefono || "-"}</td>
+        <td><span class="badge ${m.activo ? 'badge-completada' : 'badge-pendiente'}">${m.activo ? "Activo" : "Inactivo"}</span></td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6">Error al cargar mecánicos</td></tr>`;
+  }
+}
+
 // ── Bloque seguridad visual: evita insertar HTML sin escapar en gráficas ─────
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({

@@ -519,6 +519,7 @@ async function cambiarEstadoMecanico(id, activo) {
       return;
     }
 
+    mecanicosCache = [];
     cargarMecanicos();
   } catch (err) {
     alert("Error al cambiar el estado del mecánico.");
