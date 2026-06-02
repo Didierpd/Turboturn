@@ -173,23 +173,132 @@ async function cargarVehiculosEnSelect() {
   }
 }
 
+// ── Bloque selector fecha/hora: arma un valor ISO uniforme para la reserva ───
+function activarSelectorFechaHora() {
+  const fechaInput = document.getElementById("fecha");
+  const diaSelect = document.getElementById("fechaDia");
+  const mesSelect = document.getElementById("fechaMes");
+  const anioSelect = document.getElementById("fechaAnio");
+  const horaSelect = document.getElementById("fechaHora");
+  const minutoSelect = document.getElementById("fechaMinuto");
+  const periodoSelect = document.getElementById("fechaPeriodo");
+  const ayuda = document.getElementById("fechaHelp");
+
+  if (!fechaInput || !diaSelect || !mesSelect || !anioSelect || !horaSelect || !minutoSelect || !periodoSelect) return;
+
+  const meses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+  ];
+  const ahora = new Date();
+  const anioActual = ahora.getFullYear();
+
+  function opcion(valor, texto) {
+    return `<option value="${valor}">${texto}</option>`;
+  }
+
+  function dosDigitos(valor) {
+    return String(valor).padStart(2, "0");
+  }
+
+  function cargarOpcionesBase() {
+    mesSelect.innerHTML = '<option value="">Mes</option>' +
+      meses.map((mes, index) => opcion(index + 1, mes)).join("");
+
+    anioSelect.innerHTML = '<option value="">Año</option>' +
+      [anioActual, anioActual + 1].map(anio => opcion(anio, anio)).join("");
+
+    horaSelect.innerHTML = '<option value="">Hora</option>' +
+      Array.from({ length: 12 }, (_, i) => opcion(i + 1, i + 1)).join("");
+
+    minutoSelect.innerHTML = '<option value="">Min</option>' +
+      [0, 15, 30, 45].map(minuto => opcion(dosDigitos(minuto), dosDigitos(minuto))).join("");
+  }
+
+  function actualizarDias() {
+    const diaActual = diaSelect.value;
+    const mes = Number(mesSelect.value);
+    const anio = Number(anioSelect.value);
+    const diasDelMes = mes && anio ? new Date(anio, mes, 0).getDate() : 31;
+
+    diaSelect.innerHTML = '<option value="">Día</option>' +
+      Array.from({ length: diasDelMes }, (_, i) => opcion(i + 1, i + 1)).join("");
+
+    if (diaActual && Number(diaActual) <= diasDelMes) {
+      diaSelect.value = diaActual;
+    }
+  }
+
+  function limpiarErrorFecha() {
+    document.querySelectorAll(".datetime-picker select").forEach(select => select.classList.remove("field-error"));
+    if (ayuda) {
+      ayuda.classList.remove("field-help-error");
+      ayuda.textContent = "Selecciona fecha y hora para reservar.";
+    }
+  }
+
+  function sincronizarFechaHora() {
+    const dia = Number(diaSelect.value);
+    const mes = Number(mesSelect.value);
+    const anio = Number(anioSelect.value);
+    const hora = Number(horaSelect.value);
+    const minuto = minutoSelect.value;
+    const periodo = periodoSelect.value;
+
+    limpiarErrorFecha();
+
+    if (!dia || !mes || !anio || !hora || minuto === "" || !periodo) {
+      fechaInput.value = "";
+      return "";
+    }
+
+    let hora24 = hora % 12;
+    if (periodo === "PM") hora24 += 12;
+
+    fechaInput.value = `${anio}-${dosDigitos(mes)}-${dosDigitos(dia)}T${dosDigitos(hora24)}:${minuto}`;
+    return fechaInput.value;
+  }
+
+  function marcarErrorFecha() {
+    document.querySelectorAll(".datetime-picker select").forEach(select => {
+      if (!select.value) select.classList.add("field-error");
+    });
+    if (ayuda) {
+      ayuda.classList.add("field-help-error");
+      ayuda.textContent = "Completa la fecha y la hora antes de reservar.";
+    }
+  }
+
+  function resetearSelectorFechaHora() {
+    [diaSelect, mesSelect, anioSelect, horaSelect, minutoSelect, periodoSelect].forEach(select => {
+      select.value = "";
+    });
+    fechaInput.value = "";
+    actualizarDias();
+    limpiarErrorFecha();
+  }
+
+  cargarOpcionesBase();
+  actualizarDias();
+
+  [diaSelect, mesSelect, anioSelect, horaSelect, minutoSelect, periodoSelect].forEach(select => {
+    select.addEventListener("change", function () {
+      if (select === mesSelect || select === anioSelect) actualizarDias();
+      sincronizarFechaHora();
+    });
+  });
+
+  window.obtenerFechaHoraCita = sincronizarFechaHora;
+  window.marcarErrorFechaHoraCita = marcarErrorFecha;
+  window.resetearFechaHoraCita = resetearSelectorFechaHora;
+}
+
 // ── Bloque formulario de citas: reserva cita y carga servicios por taller ────
 function activarFormularioCitas() {
   const form = document.getElementById("citaForm");
   if (!form) return;
 
-  const fechaInput = document.getElementById("fecha");
-
-  fechaInput.addEventListener("invalid", function () {
-    if (!fechaInput.value) {
-      fechaInput.setCustomValidity("Selecciona o escribe la fecha y la hora completa.");
-    }
-  });
-
-  fechaInput.addEventListener("input", function () {
-    fechaInput.setCustomValidity("");
-  });
-
+  activarSelectorFechaHora();
   cargarTalleresEnSelect();
   cargarVehiculosEnSelect();
 
@@ -232,17 +341,19 @@ function activarFormularioCitas() {
     }
   });
 
-    form.addEventListener("submit", async function (e) {
+  form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) return;
 
+    const fechaHora = window.obtenerFechaHoraCita ? window.obtenerFechaHoraCita() : document.getElementById("fecha").value;
+
     const datos = {
       usuario_id: usuario.id,
       taller_id: parseInt(document.getElementById("taller").value),
       vehiculo_id: parseInt(document.getElementById("vehiculo").value),
-      fecha_hora: document.getElementById("fecha").value,
+      fecha_hora: fechaHora,
       notas: document.getElementById("notas").value,
       servicio_id: parseInt(document.getElementById("servicio").value) || null,
     };
@@ -256,8 +367,9 @@ function activarFormularioCitas() {
       return;
     }
 
-    if (!document.getElementById("fecha").value) {
-      mostrarMensaje("citaAlert", "Selecciona o escribe la fecha y la hora completa.", "error");
+    if (!datos.fecha_hora) {
+      if (window.marcarErrorFechaHoraCita) window.marcarErrorFechaHoraCita();
+      mostrarMensaje("citaAlert", "Completa la fecha y la hora antes de reservar.", "error");
       return;
     }
 
@@ -275,6 +387,7 @@ function activarFormularioCitas() {
 
       mostrarMensaje("citaAlert", "Cita reservada correctamente.", "success");
       form.reset();
+      if (window.resetearFechaHoraCita) window.resetearFechaHoraCita();
       cargarCitasUsuario();
     } catch (err) {
       mostrarMensaje("citaAlert", "No se pudo conectar con el servidor.", "error");

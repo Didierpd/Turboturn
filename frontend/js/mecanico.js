@@ -53,6 +53,12 @@ function escaparHtml(valor) {
   }[caracter]));
 }
 
+function formatoPesos(valor) {
+  const numero = Number(valor || 0);
+  if (!Number.isFinite(numero) || numero <= 0) return "-";
+  return "$" + numero.toLocaleString("es-CO");
+}
+
 // ── Bloque estado del trabajo: interpreta la fase actual de cada cita ────────
 function etapaTrabajo(cita) {
   if (cita.estado === "completada") {
@@ -71,7 +77,7 @@ function etapaTrabajo(cita) {
     };
   }
 
-  if (cita.tiempo_estimado_revision || cita.trabajo_requerido) {
+  if (cita.tiempo_estimado_revision || cita.trabajo_requerido || cita.costo_estimado_revision) {
     return {
       clave: "revision_hecha",
       texto: "Revisión hecha",
@@ -92,7 +98,7 @@ function botonTrabajo(cita) {
     return "-";
   }
 
-  const tieneRevision = Boolean(cita.tiempo_estimado_revision || cita.trabajo_requerido);
+  const tieneRevision = Boolean(cita.tiempo_estimado_revision || cita.trabajo_requerido || cita.costo_estimado_revision);
 
   return `
     <div class="mechanic-actions">
@@ -111,14 +117,15 @@ function botonTrabajo(cita) {
 // ── Bloque revisión: muestra resumen de diagnóstico ya registrado ────────────
 function resumenRevision(cita) {
   // Muestra en la tabla lo que el mecánico ya reportó después de revisar el vehículo.
-  if (!cita.tiempo_estimado_revision && !cita.trabajo_requerido) {
+  if (!cita.tiempo_estimado_revision && !cita.trabajo_requerido && !cita.costo_estimado_revision) {
     return "-";
   }
 
   return `
     <div style="min-width:180px;">
       <strong>Tiempo:</strong> ${escaparHtml(cita.tiempo_estimado_revision || "-")}<br>
-      <strong>Trabajo:</strong> ${escaparHtml(cita.trabajo_requerido || "-")}
+      <strong>Trabajo:</strong> ${escaparHtml(cita.trabajo_requerido || "-")}<br>
+      <strong>Estimado:</strong> ${formatoPesos(cita.costo_estimado_revision)}
     </div>
   `;
 }
@@ -189,6 +196,7 @@ function abrirFormularioRevision(citaId) {
   document.getElementById("revisionCitaId").value = citaId;
   document.getElementById("tiempoEstimadoRevision").value = cita.tiempo_estimado_revision || "";
   document.getElementById("trabajoRequerido").value = cita.trabajo_requerido || "";
+  document.getElementById("costoEstimadoRevision").value = cita.costo_estimado_revision || "";
 
   const card = document.getElementById("revisionTrabajoCard");
   card.style.display = "block";
@@ -210,6 +218,7 @@ function activarFormularioRevision() {
     const citaId = document.getElementById("revisionCitaId").value;
     const tiempoEstimado = document.getElementById("tiempoEstimadoRevision").value.trim();
     const trabajoRequerido = document.getElementById("trabajoRequerido").value.trim();
+    const costoEstimado = document.getElementById("costoEstimadoRevision").value;
 
     if (tiempoEstimado.length < 2) {
       mostrarMensaje("revisionTrabajoAlert", "Indica cuánto tiempo puede demorar.", "error");
@@ -221,9 +230,15 @@ function activarFormularioRevision() {
       return;
     }
 
+    if (!costoEstimado || Number(costoEstimado) < 0) {
+      mostrarMensaje("revisionTrabajoAlert", "Ingresa un costo estimado válido.", "error");
+      return;
+    }
+
     await guardarRevisionTrabajo(citaId, {
       tiempo_estimado_revision: tiempoEstimado,
       trabajo_requerido: trabajoRequerido,
+      costo_estimado_revision: Number(costoEstimado),
     });
   });
 }
@@ -244,9 +259,18 @@ async function guardarRevisionTrabajo(citaId, datos) {
       return;
     }
 
-    mostrarMensaje("revisionTrabajoAlert", "Revisión guardada correctamente.", "success");
-    cerrarFormularioRevision();
-    cargarTrabajosMecanico();
+    const data = await res.json();
+    if (data.correo_enviado === false) {
+      mostrarMensaje("revisionTrabajoAlert", "Revisión guardada, pero no se pudo enviar el correo al cliente.", "error");
+      cargarTrabajosMecanico();
+      return;
+    } else {
+      mostrarMensaje("revisionTrabajoAlert", "Revisión guardada y notificada al cliente.", "success");
+    }
+    setTimeout(() => {
+      cerrarFormularioRevision();
+      cargarTrabajosMecanico();
+    }, 900);
   } catch (err) {
     mostrarMensaje("revisionTrabajoAlert", "No se pudo guardar la revisión.", "error");
   }

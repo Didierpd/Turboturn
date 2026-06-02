@@ -124,8 +124,12 @@
             <label for="trabajoRequerido">Qué toca realizar</label>
             <textarea id="trabajoRequerido" rows="4" placeholder="Describe las reparaciones, repuestos o pasos necesarios..." required></textarea>
           </div>
+          <div class="form-group">
+            <label for="costoEstimadoRevision">Costo estimado</label>
+            <input type="number" id="costoEstimadoRevision" min="0" step="100" placeholder="Ej: 250000" required />
+          </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button type="submit" class="btn-submit">Guardar revisión</button>
+            <button type="submit" class="btn-submit">Guardar y notificar</button>
             <button type="button" class="btn-submit" onclick="cerrarFormularioRevision()" style="background:#64748b;">Cancelar</button>
           </div>
         </form>
@@ -195,7 +199,7 @@
   </div>
 
   <script src="../js/app.js?v=11"></script>
-  <script src="../js/mecanico.js?v=11"></script>
+  <script src="../js/mecanico.js?v=12"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "mecanico") { window.location.href = "./login.html"; }

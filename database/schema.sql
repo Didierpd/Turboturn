@@ -37,6 +37,7 @@ CREATE TABLE public.citas (
     notas text,
     tiempo_estimado_revision character varying(100),
     trabajo_requerido text,
+    costo_estimado_revision numeric(10,2),
     CONSTRAINT citas_estado_check CHECK (((estado)::text = ANY ((ARRAY['pendiente'::character varying, 'confirmada'::character varying, 'completada'::character varying, 'cancelada'::character varying])::text[])))
 );
 

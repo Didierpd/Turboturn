@@ -51,8 +51,36 @@
           </div>
 
           <div class="form-group">
-            <label for="fecha">Fecha y hora</label>
-            <input type="datetime-local" id="fecha" required />
+            <label>Fecha y hora</label>
+            <!-- Bloque fecha/hora: selectores propios para evitar calendarios distintos por navegador -->
+            <div class="datetime-picker" aria-label="Fecha y hora de la cita">
+              <div class="datetime-row datetime-row-date">
+                <select id="fechaDia" aria-label="Día">
+                  <option value="">Día</option>
+                </select>
+                <select id="fechaMes" aria-label="Mes">
+                  <option value="">Mes</option>
+                </select>
+                <select id="fechaAnio" aria-label="Año">
+                  <option value="">Año</option>
+                </select>
+              </div>
+              <div class="datetime-row datetime-row-time">
+                <select id="fechaHora" aria-label="Hora">
+                  <option value="">Hora</option>
+                </select>
+                <select id="fechaMinuto" aria-label="Minutos">
+                  <option value="">Min</option>
+                </select>
+                <select id="fechaPeriodo" aria-label="Periodo">
+                  <option value="">a.m./p.m.</option>
+                  <option value="AM">a.m.</option>
+                  <option value="PM">p.m.</option>
+                </select>
+              </div>
+            </div>
+            <input type="hidden" id="fecha" />
+            <p id="fechaHelp" class="field-help">Selecciona fecha y hora para reservar.</p>
           </div>
 
           <div class="form-group">

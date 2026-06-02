@@ -21,7 +21,7 @@ import psycopg2.extras
 import hashlib
 
 from database import get_connection
-from email_utils import enviar_correo_trabajo_finalizado
+from email_utils import enviar_correo_revision_mecanico, enviar_correo_trabajo_finalizado
 
 router = APIRouter()
 
@@ -53,6 +53,7 @@ class TerminarTrabajoData(BaseModel):
 class RevisionTrabajoData(BaseModel):
     tiempo_estimado_revision: str
     trabajo_requerido: str
+    costo_estimado_revision: float
 
 
 # ── Helper: hashea contraseña con SHA-256 ────────────────────────────────────
@@ -306,7 +307,7 @@ def get_citas_mecanico(mecanico_id: int):
         cur.execute(
             """
             SELECT c.id, c.fecha_hora, c.estado, c.notas,
-                   c.tiempo_estimado_revision, c.trabajo_requerido,
+                   c.tiempo_estimado_revision, c.trabajo_requerido, c.costo_estimado_revision,
                    u.nombre AS cliente,
                    v.marca, v.placa, v.tipo_vehiculo,
                    t.nombre AS taller
@@ -329,17 +330,20 @@ def get_citas_mecanico(mecanico_id: int):
         conn.close()
 
 
-# ── Guardar diagnóstico inicial: tiempo estimado y trabajo requerido ──────────
+# ── Guardar diagnóstico inicial: tiempo, trabajo, costo y notificación ───────
 @router.put("/{mecanico_id}/citas/{cita_id}/revision", summary="Guardar revisión inicial del mecánico")
 def guardar_revision_mecanico(mecanico_id: int, cita_id: int, data: RevisionTrabajoData):
-    # Este apartado permite que el mecánico registre el diagnóstico antes de cerrar el trabajo.
+    # Este apartado registra el diagnóstico y avisa al cliente antes del cierre final.
     tiempo_estimado = data.tiempo_estimado_revision.strip()
     trabajo_requerido = data.trabajo_requerido.strip()
+    costo_estimado = data.costo_estimado_revision
 
     if len(tiempo_estimado) < 2:
         raise HTTPException(status_code=400, detail="Indica cuánto tiempo puede demorar el trabajo.")
     if len(trabajo_requerido) < 5:
         raise HTTPException(status_code=400, detail="Describe qué toca realizar después de la revisión.")
+    if costo_estimado < 0:
+        raise HTTPException(status_code=400, detail="El costo estimado no puede ser negativo.")
 
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -348,23 +352,51 @@ def guardar_revision_mecanico(mecanico_id: int, cita_id: int, data: RevisionTrab
             """
             UPDATE citas c
             SET tiempo_estimado_revision = %s,
-                trabajo_requerido = %s
-            FROM mecanicos m
+                trabajo_requerido = %s,
+                costo_estimado_revision = %s
+            FROM mecanicos m, usuarios u, talleres t, vehiculos v
             WHERE c.id = %s
               AND c.mecanico_id = %s
               AND c.mecanico_id = m.id
+              AND c.usuario_id = u.id
+              AND c.taller_id = t.id
+              AND c.vehiculo_id = v.id
               AND c.estado = 'confirmada'
               AND m.activo = TRUE
-            RETURNING c.id, c.tiempo_estimado_revision, c.trabajo_requerido
+            RETURNING c.id, c.fecha_hora, c.tiempo_estimado_revision,
+                      c.trabajo_requerido, c.costo_estimado_revision,
+                      u.nombre AS cliente, u.email AS cliente_email,
+                      t.nombre AS taller,
+                      v.tipo_vehiculo, v.marca, v.placa,
+                      m.nombre AS mecanico
             """,
-            (tiempo_estimado, trabajo_requerido, cita_id, mecanico_id),
+            (tiempo_estimado, trabajo_requerido, costo_estimado, cita_id, mecanico_id),
         )
         revision = cur.fetchone()
         if not revision:
             raise HTTPException(status_code=404, detail="Cita confirmada no encontrada para este mecánico.")
 
         conn.commit()
-        return dict(revision)
+
+        correo_enviado = True
+        try:
+            enviar_correo_revision_mecanico(
+                email_destino=revision["cliente_email"],
+                cliente=revision["cliente"],
+                taller=revision["taller"],
+                fecha_hora=str(revision["fecha_hora"]),
+                vehiculo=f"{revision['tipo_vehiculo']} {revision['marca']} ({revision['placa']})",
+                mecanico=revision["mecanico"],
+                tiempo_estimado=revision["tiempo_estimado_revision"],
+                trabajo_requerido=revision["trabajo_requerido"],
+                costo_estimado=float(revision["costo_estimado_revision"]),
+            )
+        except Exception:
+            correo_enviado = False
+
+        respuesta = dict(revision)
+        respuesta["correo_enviado"] = correo_enviado
+        return respuesta
     except HTTPException:
         raise
     except Exception:

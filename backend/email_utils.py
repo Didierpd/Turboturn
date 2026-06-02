@@ -7,6 +7,7 @@ Correos de notificación:
   enviar_correo_cita_creada()        → confirmación al cliente al reservar
   enviar_correo_cita_confirmada()    → cliente y mecánico al confirmar cita
   enviar_correo_mecanico_asignado()  → notifica al mecánico asignado
+  enviar_correo_revision_mecanico()  → al cliente con diagnóstico y costo estimado
   enviar_correo_trabajo_finalizado() → al cliente al cerrar el trabajo
   enviar_correo_cancelacion_cita()   → al cliente si el taller cancela
 
@@ -144,6 +145,39 @@ def enviar_correo_mecanico_asignado(
     </body></html>
     """
     _enviar_html(email_destino, "Trabajo asignado - TurboTurn", cuerpo_html)
+
+
+# ── Notifica al cliente el diagnóstico, reparación sugerida y costo estimado ─
+def enviar_correo_revision_mecanico(
+    email_destino: str,
+    cliente: str,
+    taller: str,
+    fecha_hora: str,
+    vehiculo: str,
+    mecanico: str,
+    tiempo_estimado: str,
+    trabajo_requerido: str,
+    costo_estimado: float,
+):
+    # Este correo se envía después de la revisión, antes de cerrar el servicio.
+    extra = (
+        f'<p style="margin:0 0 8px;"><strong>Mecánico:</strong> {escape(mecanico)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Trabajo recomendado:</strong> {escape(trabajo_requerido)}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Tiempo estimado:</strong> {escape(tiempo_estimado)}</p>'
+        f'<p style="margin:0;"><strong>Costo estimado:</strong> ${float(costo_estimado):,.0f}</p>'
+    )
+
+    cuerpo_html = f"""
+    <html><body style="font-family:Arial,sans-serif;background:#f4f7fb;padding:30px;">
+      <div style="max-width:560px;margin:auto;background:white;border-radius:16px;padding:30px;box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+        <h2 style="color:#0f172a;">Resultado de la revisión</h2>
+        <p style="color:#475569;">Hola, {escape(cliente)}. El mecánico revisó tu vehículo y registró el diagnóstico inicial.</p>
+        {_bloque_cita(taller, fecha_hora, vehiculo, extra)}
+        <p style="color:#64748b;">Este valor es un estimado. El taller confirmará el cierre cuando el servicio quede terminado.</p>
+      </div>
+    </body></html>
+    """
+    _enviar_html(email_destino, "Resultado de revisión - TurboTurn", cuerpo_html)
 
 
 # ── Notifica al cliente que el trabajo fue completado con costo y observaciones ─
