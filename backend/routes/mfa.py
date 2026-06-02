@@ -23,6 +23,7 @@ from database import get_connection
 router = APIRouter()
 
 
+# ── Modelos de datos ──────────────────────────────────────────────────────────
 class MFAConfigurarRequest(BaseModel):
     usuario_id: int
     cuenta_tipo: str = "usuario"
@@ -43,6 +44,7 @@ class MFADeshabilitarRequest(BaseModel):
     cuenta_tipo: str = "usuario"
 
 
+# ── Helpers internos ──────────────────────────────────────────────────────────
 def _normalizar_tipo(cuenta_tipo: str) -> str:
     if cuenta_tipo not in ("usuario", "mecanico"):
         raise HTTPException(status_code=400, detail="Tipo de cuenta no válido.")
@@ -117,6 +119,7 @@ def _generar_qr_base64(secret: str, email: str) -> str:
     img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
+# ── Paso 1: genera el secret TOTP y devuelve el QR para escanear con Google Authenticator ─
 @router.post("/configurar", summary="Genera secret TOTP y devuelve el QR para escanear")
 def configurar_mfa(data: MFAConfigurarRequest):
     """
@@ -165,6 +168,7 @@ def configurar_mfa(data: MFAConfigurarRequest):
         conn.close()
 
 
+# ── Paso 2: confirma el primer código TOTP y activa el MFA ───────────────────
 @router.post("/verificar", summary="Confirma el primer código TOTP y activa el MFA")
 def verificar_mfa(data: MFAVerificarRequest):
     """
@@ -212,6 +216,7 @@ def verificar_mfa(data: MFAVerificarRequest):
         conn.close()
 
 
+# ── Paso 3 (login): valida el código TOTP y devuelve los datos del usuario ────
 @router.post("/validar", summary="Valida el código TOTP durante el login")
 def validar_mfa(data: MFAValidarRequest):
     """
@@ -243,6 +248,7 @@ def validar_mfa(data: MFAValidarRequest):
         conn.close()
 
 
+# ── Deshabilitar MFA (requiere código válido para confirmar acceso al Authenticator) ─
 @router.post("/deshabilitar", summary="Desactiva el MFA del usuario")
 def deshabilitar_mfa(data: MFADeshabilitarRequest):
     """
@@ -286,6 +292,7 @@ def deshabilitar_mfa(data: MFADeshabilitarRequest):
         conn.close()
 
 
+# ── Consultar si el usuario tiene MFA habilitado y verificado ────────────────
 @router.get("/estado/{usuario_id}", summary="Consulta el estado MFA de una cuenta")
 def estado_mfa(usuario_id: int, cuenta_tipo: str = "usuario"):
     """Devuelve si el usuario tiene MFA habilitado y verificado."""

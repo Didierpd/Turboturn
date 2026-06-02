@@ -1,3 +1,22 @@
+"""
+email_utils.py
+Envío de correos HTML y generación/envío de facturas PDF via Gmail SMTP.
+
+Correos de notificación:
+  enviar_correo_verificacion()       → código 6 dígitos al registrarse
+  enviar_correo_cita_creada()        → confirmación al cliente al reservar
+  enviar_correo_cita_confirmada()    → cliente y mecánico al confirmar cita
+  enviar_correo_mecanico_asignado()  → notifica al mecánico asignado
+  enviar_correo_trabajo_finalizado() → al cliente al cerrar el trabajo
+  enviar_correo_cancelacion_cita()   → al cliente si el taller cancela
+
+Factura PDF (ReportLab):
+  generar_pdf_factura()  → retorna bytes del PDF
+  enviar_factura_pdf()   → envía el PDF como adjunto al correo del cliente
+
+Credenciales en .env: EMAIL_ORIGEN, EMAIL_PASSWORD.
+"""
+
 import smtplib
 import random
 import os
@@ -21,6 +40,7 @@ EMAIL_ORIGEN = os.getenv("EMAIL_ORIGEN")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 
+# ── Helper privado: envía cualquier correo HTML por Gmail SMTP ────────────────
 def _enviar_html(email_destino: str, asunto: str, cuerpo_html: str):
     mensaje = MIMEMultipart("alternative")
     mensaje["Subject"] = asunto
@@ -33,10 +53,12 @@ def _enviar_html(email_destino: str, asunto: str, cuerpo_html: str):
         servidor.sendmail(EMAIL_ORIGEN, email_destino, mensaje.as_string())
 
 
+# ── Helper: genera código de verificación de 6 dígitos ───────────────────────
 def generar_codigo() -> str:
     return str(random.randint(100000, 999999))
 
 
+# ── Correo de verificación de registro (envía el código de 6 dígitos) ────────
 def enviar_correo_verificacion(email_destino: str, nombre: str, codigo: str):
     cuerpo_html = f"""
     <html><body style="font-family:Arial,sans-serif;background:#f4f7fb;padding:30px;">
@@ -54,6 +76,7 @@ def enviar_correo_verificacion(email_destino: str, nombre: str, codigo: str):
     _enviar_html(email_destino, "Código de verificación - TurboTurn", cuerpo_html)
 
 
+# ── Helper privado: genera el bloque HTML con los datos de la cita ────────────
 def _bloque_cita(taller: str, fecha_hora: str, vehiculo: str, extra: str = "") -> str:
     return f"""
       <div style="background:#f8fafc;border-left:4px solid #0f766e;border-radius:10px;padding:16px;margin:18px 0;color:#334155;">
@@ -65,6 +88,7 @@ def _bloque_cita(taller: str, fecha_hora: str, vehiculo: str, extra: str = "") -
     """
 
 
+# ── Notifica al cliente que su cita fue recibida (pendiente de confirmación) ──
 def enviar_correo_cita_creada(email_destino: str, cliente: str, taller: str, fecha_hora: str, vehiculo: str):
     cuerpo_html = f"""
     <html><body style="font-family:Arial,sans-serif;background:#f4f7fb;padding:30px;">
@@ -78,6 +102,7 @@ def enviar_correo_cita_creada(email_destino: str, cliente: str, taller: str, fec
     _enviar_html(email_destino, "Cita reservada - TurboTurn", cuerpo_html)
 
 
+# ── Notifica al cliente que la cita fue confirmada con mecánico asignado ──────
 def enviar_correo_cita_confirmada(
     email_destino: str,
     cliente: str,
@@ -99,6 +124,7 @@ def enviar_correo_cita_confirmada(
     _enviar_html(email_destino, "Cita confirmada - TurboTurn", cuerpo_html)
 
 
+# ── Notifica al mecánico que le asignaron una cita ───────────────────────────
 def enviar_correo_mecanico_asignado(
     email_destino: str,
     mecanico: str,
@@ -120,6 +146,7 @@ def enviar_correo_mecanico_asignado(
     _enviar_html(email_destino, "Trabajo asignado - TurboTurn", cuerpo_html)
 
 
+# ── Notifica al cliente que el trabajo fue completado con costo y observaciones ─
 def enviar_correo_trabajo_finalizado(
     email_destino: str,
     cliente: str,
@@ -149,6 +176,7 @@ def enviar_correo_trabajo_finalizado(
     _enviar_html(email_destino, "Trabajo finalizado - TurboTurn", cuerpo_html)
 
 
+# ── Notifica al cliente que el taller canceló su cita con el motivo ──────────
 def enviar_correo_cancelacion_cita(
     email_destino: str,
     cliente: str,
@@ -182,6 +210,7 @@ def enviar_correo_cancelacion_cita(
     _enviar_html(email_destino, "Tu cita fue cancelada - TurboTurn", cuerpo_html)
 
 
+# ── Genera el PDF de la factura con ReportLab y retorna los bytes ─────────────
 def generar_pdf_factura(datos: dict) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
@@ -267,6 +296,7 @@ def generar_pdf_factura(datos: dict) -> bytes:
     return buffer.getvalue()
 
 
+# ── Genera el PDF y lo envía como adjunto al correo del cliente ───────────────
 def enviar_factura_pdf(datos: dict):
     pdf_bytes = generar_pdf_factura(datos)
 

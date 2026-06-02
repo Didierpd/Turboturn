@@ -1,3 +1,10 @@
+"""
+routes/historial.py
+Historial de servicios completados para un cliente.
+
+  GET /api/historial/{usuario_id}  → servicios realizados con detalle de cita, vehículo y costo
+"""
+
 from fastapi import APIRouter, HTTPException
 import psycopg2.extras
 from database import get_connection
@@ -5,6 +12,7 @@ from database import get_connection
 router = APIRouter()
 
 
+# ── Historial de servicios completados del cliente (con vehículo y costo) ─────
 @router.get("/{usuario_id}", summary="Historial de servicios del usuario")
 def get_historial(usuario_id: int):
     conn = get_connection()

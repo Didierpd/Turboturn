@@ -1,3 +1,18 @@
+"""
+routes/citas.py
+Gestión completa de citas entre clientes y talleres.
+
+  GET  /api/citas/talleres-activos              → talleres visibles para reservar (mapa y lista)
+  GET  /api/citas/estadisticas/admin            → métricas globales para el panel admin
+  GET  /api/citas/estadisticas/taller/{id}      → métricas del panel taller
+  GET  /api/citas/taller/{id}/clientes          → clientes que han visitado el taller
+  GET  /api/citas/taller/{id}                   → citas del taller (pendientes e historial)
+  PUT  /api/citas/{id}/estado                   → confirmar, completar o cancelar una cita
+  GET  /api/citas/{usuario_id}                  → citas del cliente
+  POST /api/citas/                              → reservar cita (máx. 10 por día por taller)
+  POST /api/citas/{id}/factura                  → generar PDF y enviarlo al correo del cliente
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -14,6 +29,7 @@ from email_utils import (
 router = APIRouter()
 
 
+# ── Modelo de datos para crear una cita ──────────────────────────────────────
 class CitaData(BaseModel):
     usuario_id: int
     vehiculo_id: int
@@ -23,10 +39,12 @@ class CitaData(BaseModel):
     servicio_id: Optional[int] = None
 
 
+# ── Helper: convierte filas del cursor a lista de dicts ──────────────────────
 def _fetchall_dict(cur):
     return [dict(row) for row in cur.fetchall()]
 
 
+# ── Talleres activos (mapa y lista de talleres disponibles para reservar) ────
 @router.get("/talleres-activos", summary="Listar talleres activos")
 def get_talleres_activos():
     conn = get_connection()
@@ -49,6 +67,7 @@ def get_talleres_activos():
         conn.close()
 
 
+# ── Estadísticas globales para el panel del administrador ────────────────────
 @router.get("/estadisticas/admin", summary="Estadísticas generales para administrador")
 def estadisticas_admin():
     conn = get_connection()
@@ -118,6 +137,7 @@ def estadisticas_admin():
         conn.close()
 
 
+# ── Estadísticas del panel del taller (citas, servicios, mecánicos, clientes) ─
 @router.get("/estadisticas/taller/{usuario_id}", summary="Estadísticas del taller")
 def estadisticas_taller(usuario_id: int):
     conn = get_connection()
@@ -206,6 +226,7 @@ def estadisticas_taller(usuario_id: int):
         conn.close()
 
 
+# ── Clientes únicos que han tenido citas en el taller ────────────────────────
 @router.get("/taller/{usuario_id}/clientes", summary="Clientes del taller")
 def get_clientes_taller(usuario_id: int):
     conn = get_connection()
@@ -232,6 +253,7 @@ def get_clientes_taller(usuario_id: int):
         conn.close()
 
 
+# ── Todas las citas del taller (vista del panel taller) ──────────────────────
 @router.get("/taller/{usuario_id}", summary="Obtener citas del taller por usuario taller")
 def get_citas_taller(usuario_id: int):
     conn = get_connection()
@@ -260,6 +282,7 @@ def get_citas_taller(usuario_id: int):
         conn.close()
 
 
+# ── Cambiar estado de una cita: pendiente → confirmada → completada / cancelada ─
 @router.put("/{cita_id}/estado", summary="Cambiar estado de una cita")
 def cambiar_estado_cita(
     cita_id: int,
@@ -404,6 +427,7 @@ def cambiar_estado_cita(
         conn.close()
 
 
+# ── Citas del cliente (historial y pendientes en el panel usuario) ────────────
 @router.get("/{usuario_id}", summary="Obtener citas de un usuario")
 def get_citas(usuario_id: int):
     conn = get_connection()
@@ -429,6 +453,7 @@ def get_citas(usuario_id: int):
         conn.close()
 
 
+# ── Reservar una cita (máx. 10 por día por taller, sin duplicar hora exacta) ──
 @router.post("/", summary="Reservar una cita")
 def create_cita(data: CitaData):
     conn = get_connection()
@@ -503,6 +528,7 @@ def create_cita(data: CitaData):
         conn.close()
 
 
+# ── Generar factura PDF y enviarla al correo del cliente ─────────────────────
 @router.post("/{cita_id}/factura", summary="Generar y enviar factura PDF al cliente")
 def enviar_factura(cita_id: int):
     conn = get_connection()

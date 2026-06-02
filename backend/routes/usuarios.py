@@ -27,6 +27,7 @@ from email_utils import generar_codigo, enviar_correo_verificacion
 router = APIRouter()
 
 
+# ── Modelos de datos ──────────────────────────────────────────────────────────
 class UsuarioRegistro(BaseModel):
     nombre: str
     email: EmailStr
@@ -43,10 +44,12 @@ class UsuarioLogin(BaseModel):
     password: str
 
 
+# ── Helper: hashea la contraseña con SHA-256 ─────────────────────────────────
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+# ── Registro: guarda datos temporalmente y envía código de verificación por correo ─
 @router.post("/registro", summary="Registrar nuevo usuario")
 def registro(data: UsuarioRegistro):
     conn = get_connection()
@@ -95,6 +98,7 @@ def registro(data: UsuarioRegistro):
         conn.close()
 
 
+# ── Login fase 1: valida email + contraseña (si tiene MFA, devuelve mfa_requerido: true) ─
 @router.post("/login", summary="Iniciar sesión (fase 1 de 2 si MFA está activo)")
 def login(data: UsuarioLogin):
     conn = get_connection()
@@ -176,6 +180,7 @@ def login(data: UsuarioLogin):
         conn.close()
 
 
+# ── Talleres pendientes de aprobación (panel admin) ──────────────────────────
 @router.get("/talleres-pendientes", summary="Listar talleres pendientes de aprobación")
 def talleres_pendientes():
     conn = get_connection()
@@ -192,6 +197,7 @@ def talleres_pendientes():
         conn.close()
 
 
+# ── Listar todos los usuarios (panel admin → gestión de cuentas) ─────────────
 @router.get("/todos", summary="Listar todos los usuarios")
 def todos_usuarios():
     conn = get_connection()
@@ -206,6 +212,7 @@ def todos_usuarios():
         conn.close()
 
 
+# ── Aprobar taller: cambia estado a 'activo' ─────────────────────────────────
 @router.put("/{usuario_id}/aprobar", summary="Aprobar taller")
 def aprobar_taller(usuario_id: int):
     conn = get_connection()
@@ -222,6 +229,7 @@ def aprobar_taller(usuario_id: int):
         conn.close()
 
 
+# ── Rechazar taller: cambia estado a 'rechazado' ─────────────────────────────
 @router.put("/{usuario_id}/rechazar", summary="Rechazar taller")
 def rechazar_taller(usuario_id: int):
     conn = get_connection()
@@ -238,6 +246,7 @@ def rechazar_taller(usuario_id: int):
         conn.close()
 
 
+# ── Activar usuario (admin desbloquea una cuenta restringida) ────────────────
 @router.put("/{usuario_id}/activar", summary="Activar usuario")
 def activar_usuario(usuario_id: int):
     conn = get_connection()
@@ -254,6 +263,7 @@ def activar_usuario(usuario_id: int):
         conn.close()
 
 
+# ── Restringir usuario: bloquea el acceso sin eliminar la cuenta ──────────────
 @router.put("/{usuario_id}/restringir", summary="Restringir usuario")
 def restringir_usuario(usuario_id: int):
     conn = get_connection()
@@ -270,6 +280,7 @@ def restringir_usuario(usuario_id: int):
         conn.close()
 
 
+# ── Eliminar usuario permanentemente ─────────────────────────────────────────
 @router.delete("/{usuario_id}/eliminar", summary="Eliminar usuario")
 def eliminar_usuario(usuario_id: int):
     conn = get_connection()
@@ -286,6 +297,7 @@ def eliminar_usuario(usuario_id: int):
         conn.close()
 
 
+# ── Verificar código de registro: confirma el correo y crea la cuenta ─────────
 class VerificarCodigoRequest(BaseModel):
     email: EmailStr
     codigo: str
@@ -354,6 +366,7 @@ def verificar_codigo(data: VerificarCodigoRequest):
         conn.close()
 
 
+# ── Obtener perfil de un usuario por ID ──────────────────────────────────────
 @router.get("/{usuario_id}", summary="Obtener datos de un usuario")
 def get_usuario(usuario_id: int):
     conn = get_connection()
