@@ -22,7 +22,7 @@ import psycopg2.extras
 import hashlib
 
 from database import get_connection
-from email_utils import generar_codigo, enviar_correo_verificacion
+from email_utils import generar_codigo, enviar_correo_verificacion, enviar_correo_recuperacion
 
 router = APIRouter()
 
@@ -361,6 +361,84 @@ def verificar_codigo(data: VerificarCodigoRequest):
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error al verificar: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── Recuperar contraseña: envía código temporal al correo ────────────────────
+class RecuperarPasswordRequest(BaseModel):
+    email: EmailStr
+
+@router.post("/recuperar-password", summary="Enviar código de recuperación de contraseña")
+def recuperar_password(data: RecuperarPasswordRequest):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute("SELECT id, nombre FROM usuarios WHERE email = %s AND estado = 'activo'", (data.email,))
+        usuario = cur.fetchone()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="No existe una cuenta activa con ese correo.")
+
+        codigo = generar_codigo()
+        cur.execute(
+            """
+            INSERT INTO codigos_verificacion (email, codigo, datos_registro)
+            VALUES (%s, %s, %s)
+            """,
+            (data.email, codigo, json.dumps({"tipo": "recuperacion"})),
+        )
+        conn.commit()
+        enviar_correo_recuperacion(data.email, usuario["nombre"], codigo)
+        return {"mensaje": "Te enviamos un código a tu correo para restablecer tu contraseña."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al enviar código: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── Resetear contraseña: valida código y actualiza la contraseña ──────────────
+class ResetearPasswordRequest(BaseModel):
+    email: EmailStr
+    codigo: str
+    nueva_password: str
+
+@router.post("/resetear-password", summary="Restablecer contraseña con código de verificación")
+def resetear_password(data: ResetearPasswordRequest):
+    if len(data.nueva_password) < 6:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres.")
+
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT id FROM codigos_verificacion
+            WHERE email = %s AND codigo = %s AND usado = FALSE AND expira_en > NOW()
+            ORDER BY creado_en DESC LIMIT 1
+            """,
+            (data.email, data.codigo),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=400, detail="Código incorrecto o expirado.")
+
+        cur.execute(
+            "UPDATE usuarios SET contrasena = %s WHERE email = %s",
+            (_hash_password(data.nueva_password), data.email),
+        )
+        cur.execute("UPDATE codigos_verificacion SET usado = TRUE WHERE id = %s", (row["id"],))
+        conn.commit()
+        return {"mensaje": "Contraseña actualizada correctamente. Ya puedes iniciar sesión."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al restablecer contraseña: {str(e)}")
     finally:
         cur.close()
         conn.close()

@@ -77,6 +77,23 @@ def enviar_correo_verificacion(email_destino: str, nombre: str, codigo: str):
     _enviar_html(email_destino, "Código de verificación - TurboTurn", cuerpo_html)
 
 
+# ── Correo de recuperación de contraseña (envía código de 6 dígitos) ─────────
+def enviar_correo_recuperacion(email_destino: str, nombre: str, codigo: str):
+    cuerpo_html = f"""
+    <html><body style="font-family:Arial,sans-serif;background:#f4f7fb;padding:30px;">
+      <div style="max-width:500px;margin:auto;background:white;border-radius:16px;padding:30px;box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+        <h2 style="color:#0f172a;">Recuperar contraseña, {nombre}</h2>
+        <p style="color:#475569;">Recibimos una solicitud para restablecer tu contraseña. Usa este código:</p>
+        <div style="font-size:2.5rem;font-weight:bold;letter-spacing:10px;color:#1d4ed8;text-align:center;margin:20px 0;padding:20px;background:#eff6ff;border-radius:10px;">
+          {codigo}
+        </div>
+        <p style="color:#94a3b8;font-size:0.85rem;">Este código expira en 15 minutos. Si no solicitaste esto, ignora este correo.</p>
+      </div>
+    </body></html>
+    """
+    _enviar_html(email_destino, "Recuperar contraseña - TurboTurn", cuerpo_html)
+
+
 # ── Helper privado: genera el bloque HTML con los datos de la cita ────────────
 def _bloque_cita(taller: str, fecha_hora: str, vehiculo: str, extra: str = "") -> str:
     return f"""
