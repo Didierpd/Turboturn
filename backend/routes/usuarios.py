@@ -165,6 +165,9 @@ def login(data: UsuarioLogin):
             }
 
         usuario.pop("mfa_habilitado", None)
+        # El superadmin entra al mismo panel que el admin pero con rol normalizado
+        if usuario.get("rol") == "superadmin":
+            usuario["rol"] = "admin"
         return {
             "mfa_requerido": False,
             "mensaje": "Login exitoso.",
@@ -203,7 +206,8 @@ def todos_usuarios():
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
-        cur.execute("SELECT id, nombre, email, rol, estado, telefono FROM usuarios ORDER BY id")
+        # El superadmin no aparece en la interfaz, solo se gestiona desde la terminal
+        cur.execute("SELECT id, nombre, email, rol, estado, telefono FROM usuarios WHERE rol != 'superadmin' ORDER BY id")
         return [dict(r) for r in cur.fetchall()]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
@@ -281,14 +285,29 @@ def restringir_usuario(usuario_id: int):
 
 
 # ── Eliminar usuario permanentemente ─────────────────────────────────────────
+# El superadmin nunca puede eliminarse desde la interfaz, solo desde la terminal.
+# Para eliminarlo se debe primero asignar otro superadmin desde la BD.
 @router.delete("/{usuario_id}/eliminar", summary="Eliminar usuario")
 def eliminar_usuario(usuario_id: int):
     conn = get_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
+        cur.execute("SELECT rol FROM usuarios WHERE id = %s", (usuario_id,))
+        usuario = cur.fetchone()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+        if usuario["rol"] == "superadmin":
+            raise HTTPException(
+                status_code=403,
+                detail="El superadmin no puede eliminarse desde la interfaz. Debe gestionarse directamente desde la terminal.",
+            )
+
         cur.execute("DELETE FROM usuarios WHERE id = %s", (usuario_id,))
         conn.commit()
         return {"mensaje": "Usuario eliminado."}
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
