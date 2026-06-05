@@ -384,8 +384,19 @@ function activarFormularioCitas() {
     }
 
     if (!datos.fecha_hora) {
-      if (window.marcarErrorFechaHoraCita) window.marcarErrorFechaHoraCita();
-      mostrarMensaje("citaAlert", "Completa la fecha y la hora antes de reservar.", "error");
+      const dia = document.getElementById("fechaDia")?.value;
+      const mes = document.getElementById("fechaMes")?.value;
+      const anio = document.getElementById("fechaAnio")?.value;
+      const hora = document.getElementById("fechaHora")?.value;
+      const minuto = document.getElementById("fechaMinuto")?.value;
+      const periodo = document.getElementById("fechaPeriodo")?.value;
+      const todosLlenos = dia && mes && anio && hora && minuto !== "" && periodo;
+      if (todosLlenos) {
+        mostrarMensaje("citaAlert", "No puedes reservar en una fecha u hora que ya pasó.", "error");
+      } else {
+        if (window.marcarErrorFechaHoraCita) window.marcarErrorFechaHoraCita();
+        mostrarMensaje("citaAlert", "Completa la fecha y la hora antes de reservar.", "error");
+      }
       return;
     }
 
