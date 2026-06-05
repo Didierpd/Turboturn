@@ -32,6 +32,10 @@ function crearIconoTaller() {
   });
 }
 
+function horaCortaMapa(hora) {
+  return String(hora || "").slice(0, 5);
+}
+
 // ── Bloque popup: contenido mostrado al seleccionar un taller ────────────────
 function popupTaller(taller) {
   return `
@@ -39,6 +43,7 @@ function popupTaller(taller) {
       <strong>${taller.nombre}</strong>
       <p>${taller.direccion || "Dirección no registrada"}</p>
       <span>${taller.telefono || "Sin teléfono"}</span>
+      <span>Horario: ${horaCortaMapa(taller.horario_apertura)} a ${horaCortaMapa(taller.horario_cierre)}</span>
     </div>
   `;
 }
@@ -57,6 +62,7 @@ function pintarListaTalleres(talleres) {
     <button type="button" class="map-list-item" onclick="enfocarTaller(${index})">
       <strong>${taller.nombre}</strong>
       <span>${taller.direccion || "Dirección no registrada"}</span>
+      <span>Horario: ${horaCortaMapa(taller.horario_apertura)} a ${horaCortaMapa(taller.horario_cierre)}</span>
     </button>
   `).join("");
 }

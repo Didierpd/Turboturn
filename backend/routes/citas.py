@@ -17,6 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import psycopg2.extras
+from datetime import datetime
 from database import get_connection
 from email_utils import (
     enviar_correo_cancelacion_cita,
@@ -44,6 +45,13 @@ def _fetchall_dict(cur):
     return [dict(row) for row in cur.fetchall()]
 
 
+def _parse_fecha_hora_cita(fecha_hora: str) -> datetime:
+    try:
+        return datetime.fromisoformat(fecha_hora)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="La fecha y hora de la cita no es válida.")
+
+
 # ── Talleres activos (mapa y lista de talleres disponibles para reservar) ────
 @router.get("/talleres-activos", summary="Listar talleres activos")
 def get_talleres_activos():
@@ -52,7 +60,8 @@ def get_talleres_activos():
     try:
         cur.execute(
             """
-            SELECT t.id, t.nombre, t.direccion, t.telefono, t.latitud, t.longitud
+            SELECT t.id, t.nombre, t.direccion, t.telefono, t.latitud, t.longitud,
+                   t.horario_apertura, t.horario_cierre
             FROM talleres t
             JOIN usuarios u ON t.admin_id = u.id
             WHERE u.estado = 'activo'
@@ -455,6 +464,31 @@ def create_cita(data: CitaData):
     cita_creada = None
     datos_correo = None
     try:
+        fecha_cita = _parse_fecha_hora_cita(data.fecha_hora)
+
+        cur.execute(
+            """
+            SELECT id, nombre, horario_apertura, horario_cierre
+            FROM talleres
+            WHERE id = %s
+            """,
+            (data.taller_id,),
+        )
+        taller = cur.fetchone()
+        if not taller:
+            raise HTTPException(status_code=404, detail="Taller no encontrado.")
+
+        apertura = taller["horario_apertura"]
+        cierre = taller["horario_cierre"]
+        if apertura and cierre and not (apertura <= fecha_cita.time() < cierre):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"El taller {taller['nombre']} atiende de "
+                    f"{apertura.strftime('%H:%M')} a {cierre.strftime('%H:%M')}."
+                ),
+            )
+
         cur.execute(
             """SELECT COUNT(*) as total FROM citas
                WHERE taller_id = %s AND DATE(fecha_hora) = DATE(%s)""",
