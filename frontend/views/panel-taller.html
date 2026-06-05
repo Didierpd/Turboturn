@@ -19,6 +19,7 @@
         <a href="#" class="tab-btn" data-tab="clientes">Clientes</a>
         <a href="#" class="tab-btn" data-tab="mecanicos">Mecánicos</a>
         <a href="#" class="tab-btn" data-tab="servicios">Servicios</a>
+        <a href="#" class="tab-btn" data-tab="seguridad">Seguridad</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
@@ -241,6 +242,58 @@
         </div>
       </div>
 
+      <!-- Seguridad MFA -->
+      <div id="tab-seguridad" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>🔐 Seguridad — Verificación en dos pasos (MFA)</h2>
+          <p style="color:#64748b; margin-bottom:20px;">
+            Protege tu cuenta activando Google Authenticator. Cada vez que inicies sesión
+            se te pedirá un código de 6 dígitos desde tu teléfono.
+          </p>
+
+          <div id="mfaEstado" style="margin-bottom:16px;">
+            <span id="mfaBadge" style="display:inline-block;padding:6px 14px;border-radius:999px;font-weight:bold;font-size:0.9rem;"></span>
+          </div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button id="btnActivarMFA" class="btn-submit" style="display:none; background:#16a34a;">Activar MFA</button>
+            <button id="btnDesactivarMFA" class="btn-submit" style="display:none; background:#dc2626;">Desactivar MFA</button>
+          </div>
+
+          <div id="mfaQRSection" style="display:none; margin-top:24px;">
+            <hr style="margin-bottom:20px; border-color:#e5e7eb;" />
+            <h3 style="margin-bottom:12px;">Paso 1 — Escanea el código QR</h3>
+            <p style="color:#64748b; margin-bottom:16px;">Abre <strong>Google Authenticator</strong>, toca <strong>+</strong> y escanea:</p>
+            <div style="text-align:center; margin-bottom:16px;">
+              <img id="mfaQRImg" src="" alt="QR MFA" style="width:200px;height:200px;border:4px solid #1d4ed8;border-radius:12px;" />
+            </div>
+            <p style="color:#64748b; font-size:0.85rem; margin-bottom:4px;">¿No puedes escanear? Ingresa este código manualmente:</p>
+            <div style="background:#f1f5f9;padding:10px 16px;border-radius:8px;font-family:monospace;font-size:1rem;letter-spacing:3px;text-align:center;margin-bottom:20px;" id="mfaSecretText">—</div>
+            <h3 style="margin-bottom:12px;">Paso 2 — Confirma con el código</h3>
+            <form id="mfaVerificarForm" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+                <input type="text" id="codigoActivacion" maxlength="6" placeholder="123456" style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+              </div>
+              <button type="submit" class="btn-submit" style="background:#1d4ed8;">Confirmar y activar</button>
+            </form>
+            <div id="mfaActivarAlert" class="alert" style="margin-top:12px;"></div>
+          </div>
+
+          <div id="mfaDesactivarSection" style="display:none; margin-top:24px;">
+            <hr style="margin-bottom:20px; border-color:#e5e7eb;" />
+            <h3 style="margin-bottom:12px;">Desactivar MFA</h3>
+            <form id="mfaDesactivarForm" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+                <input type="text" id="codigoDesactivar" maxlength="6" placeholder="123456" style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+              </div>
+              <button type="submit" class="btn-submit" style="background:#dc2626;">Confirmar y desactivar</button>
+            </form>
+            <div id="mfaDesactivarAlert" class="alert" style="margin-top:12px;"></div>
+          </div>
+          <div id="mfaAlert" class="alert" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Bloque footer: datos de contacto comunes -->
@@ -304,6 +357,7 @@
       if (tab === "clientes") cargarClientes();
       if (tab === "mecanicos") cargarMecanicos();
       if (tab === "servicios") cargarServiciosTaller();
+      if (tab === "seguridad") cargarEstadoMFA();
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -311,6 +365,89 @@
         e.preventDefault();
         mostrarTab(this.dataset.tab);
       });
+    });
+
+    // ── MFA: cargar estado ──
+    async function cargarEstadoMFA() {
+      try {
+        const res = await fetch(`/api/mfa/estado/${usuario.id}`);
+        const data = await res.json();
+        const badge = document.getElementById("mfaBadge");
+        const btnActivar = document.getElementById("btnActivarMFA");
+        const btnDesactivar = document.getElementById("btnDesactivarMFA");
+        if (data.mfa_habilitado) {
+          badge.textContent = "✅ MFA Activo";
+          badge.style.background = "#dcfce7";
+          badge.style.color = "#166534";
+          btnActivar.style.display = "none";
+          btnDesactivar.style.display = "inline-block";
+        } else {
+          badge.textContent = "⚠️ MFA Inactivo";
+          badge.style.background = "#fef3c7";
+          badge.style.color = "#92400e";
+          btnActivar.style.display = "inline-block";
+          btnDesactivar.style.display = "none";
+        }
+      } catch {}
+    }
+
+    // ── MFA: activar ──
+    document.getElementById("btnActivarMFA").addEventListener("click", async function() {
+      try {
+        const res = await fetch("/api/mfa/configurar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id }),
+        });
+        const data = await res.json();
+        document.getElementById("mfaQRImg").src = `data:image/png;base64,${data.qr_base64}`;
+        document.getElementById("mfaSecretText").textContent = data.secret;
+        document.getElementById("mfaQRSection").style.display = "block";
+        document.getElementById("mfaDesactivarSection").style.display = "none";
+      } catch { mostrarMensaje("mfaAlert", "Error al generar el QR.", "error"); }
+    });
+
+    // ── MFA: confirmar activación ──
+    document.getElementById("mfaVerificarForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigoActivacion").value.trim();
+      try {
+        const res = await fetch("/api/mfa/verificar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, codigo }),
+        });
+        const data = await res.json();
+        if (!res.ok) { mostrarMensaje("mfaActivarAlert", data.detail || "Código incorrecto.", "error"); return; }
+        mostrarMensaje("mfaActivarAlert", "✅ MFA activado correctamente.", "success");
+        document.getElementById("mfaQRSection").style.display = "none";
+        document.getElementById("codigoActivacion").value = "";
+        cargarEstadoMFA();
+      } catch { mostrarMensaje("mfaActivarAlert", "Error al activar MFA.", "error"); }
+    });
+
+    // ── MFA: desactivar ──
+    document.getElementById("btnDesactivarMFA").addEventListener("click", function() {
+      document.getElementById("mfaDesactivarSection").style.display = "block";
+      document.getElementById("mfaQRSection").style.display = "none";
+    });
+
+    document.getElementById("mfaDesactivarForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigoDesactivar").value.trim();
+      try {
+        const res = await fetch("/api/mfa/deshabilitar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, codigo }),
+        });
+        const data = await res.json();
+        if (!res.ok) { mostrarMensaje("mfaDesactivarAlert", data.detail || "Código incorrecto.", "error"); return; }
+        mostrarMensaje("mfaDesactivarAlert", "MFA desactivado correctamente.", "success");
+        document.getElementById("mfaDesactivarSection").style.display = "none";
+        document.getElementById("codigoDesactivar").value = "";
+        cargarEstadoMFA();
+      } catch { mostrarMensaje("mfaDesactivarAlert", "Error al desactivar MFA.", "error"); }
     });
 
     cargarAgendaHoy();
