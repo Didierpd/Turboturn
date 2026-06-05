@@ -221,10 +221,16 @@ function activarSelectorFechaHora() {
     const anio = Number(anioSelect.value);
     const diasDelMes = mes && anio ? new Date(anio, mes, 0).getDate() : 31;
 
-    diaSelect.innerHTML = '<option value="">Día</option>' +
-      Array.from({ length: diasDelMes }, (_, i) => opcion(i + 1, i + 1)).join("");
+    const hoy = new Date();
+    const esHoy = anio === hoy.getFullYear() && mes === (hoy.getMonth() + 1);
+    const diaMinimo = esHoy ? hoy.getDate() : 1;
 
-    if (diaActual && Number(diaActual) <= diasDelMes) {
+    diaSelect.innerHTML = '<option value="">Día</option>' +
+      Array.from({ length: diasDelMes }, (_, i) => i + 1)
+        .filter(dia => dia >= diaMinimo)
+        .map(dia => opcion(dia, dia)).join("");
+
+    if (diaActual && Number(diaActual) <= diasDelMes && Number(diaActual) >= diaMinimo) {
       diaSelect.value = diaActual;
     }
   }
@@ -254,6 +260,16 @@ function activarSelectorFechaHora() {
 
     let hora24 = hora % 12;
     if (periodo === "PM") hora24 += 12;
+
+    const fechaSeleccionada = new Date(`${anio}-${dosDigitos(mes)}-${dosDigitos(dia)}T${dosDigitos(hora24)}:${minuto}`);
+    if (fechaSeleccionada <= new Date()) {
+      fechaInput.value = "";
+      if (ayuda) {
+        ayuda.classList.add("field-help-error");
+        ayuda.textContent = "No puedes reservar en una fecha u hora que ya pasó.";
+      }
+      return "";
+    }
 
     fechaInput.value = `${anio}-${dosDigitos(mes)}-${dosDigitos(dia)}T${dosDigitos(hora24)}:${minuto}`;
     return fechaInput.value;
