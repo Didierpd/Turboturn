@@ -674,6 +674,73 @@ async function eliminarServicio(id) {
   }
 }
 
+// ── Bloque horario: consulta y actualiza el horario de atención del taller ───
+function horaCortaTaller(hora) {
+  return String(hora || "").slice(0, 5);
+}
+
+function minutosHorarioTaller(hora) {
+  const [horas, minutos] = horaCortaTaller(hora).split(":").map(Number);
+  if (Number.isNaN(horas) || Number.isNaN(minutos)) return null;
+  return horas * 60 + minutos;
+}
+
+async function cargarHorarioTaller() {
+  const aperturaInput = document.getElementById("tallerHorarioApertura");
+  const cierreInput = document.getElementById("tallerHorarioCierre");
+  if (!aperturaInput || !cierreInput) return;
+
+  const usuario = usuarioTaller();
+  try {
+    const res = await fetch(`/api/usuarios/taller/${usuario.id}/horario`);
+    if (!res.ok) throw new Error("No se pudo cargar el horario");
+
+    const taller = await res.json();
+    aperturaInput.value = horaCortaTaller(taller.horario_apertura || "08:00");
+    cierreInput.value = horaCortaTaller(taller.horario_cierre || "18:00");
+  } catch (err) {
+    mostrarMensaje("horarioTallerAlert", "No se pudo cargar el horario del taller.", "error");
+  }
+}
+
+function activarFormularioHorarioTaller() {
+  const form = document.getElementById("horarioTallerForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const usuario = usuarioTaller();
+    const datos = {
+      horario_apertura: document.getElementById("tallerHorarioApertura").value,
+      horario_cierre: document.getElementById("tallerHorarioCierre").value,
+    };
+
+    if (minutosHorarioTaller(datos.horario_apertura) >= minutosHorarioTaller(datos.horario_cierre)) {
+      mostrarMensaje("horarioTallerAlert", "La hora de apertura debe ser menor que la hora de cierre.", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/usuarios/taller/${usuario.id}/horario`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        mostrarMensaje("horarioTallerAlert", data.detail || "Error al guardar el horario.", "error");
+        return;
+      }
+
+      mostrarMensaje("horarioTallerAlert", "Horario actualizado correctamente.", "success");
+    } catch (err) {
+      mostrarMensaje("horarioTallerAlert", "No se pudo conectar con el servidor.", "error");
+    }
+  });
+}
+
 // ── Bloque facturación: solicita al backend generar y enviar PDF por correo ──
 async function enviarFactura(citaId) {
   if (!confirm("¿Enviar la factura al cliente por correo?")) return;

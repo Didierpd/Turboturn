@@ -20,6 +20,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 import psycopg2.extras
 import hashlib
+from datetime import time
 
 from database import get_connection
 from email_utils import generar_codigo, enviar_correo_verificacion, enviar_correo_recuperacion
@@ -38,15 +39,36 @@ class UsuarioRegistro(BaseModel):
     direccion_taller: Optional[str] = None
     latitud: Optional[float] = None
     longitud: Optional[float] = None
+    horario_apertura: Optional[str] = None
+    horario_cierre: Optional[str] = None
 
 class UsuarioLogin(BaseModel):
     email: EmailStr
     password: str
 
 
+class TallerHorario(BaseModel):
+    horario_apertura: str
+    horario_cierre: str
+
+
 # ── Helper: hashea la contraseña con SHA-256 ─────────────────────────────────
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+def _parse_horario(valor: str, campo: str) -> time:
+    try:
+        return time.fromisoformat(valor)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail=f"{campo} debe tener formato HH:MM.")
+
+
+def _validar_rango_horario(apertura: str, cierre: str):
+    hora_apertura = _parse_horario(apertura, "horario_apertura")
+    hora_cierre = _parse_horario(cierre, "horario_cierre")
+    if hora_apertura >= hora_cierre:
+        raise HTTPException(status_code=400, detail="La hora de apertura debe ser menor que la hora de cierre.")
 
 
 # ── Registro: guarda datos temporalmente y envía código de verificación por correo ─
@@ -73,7 +95,17 @@ def registro(data: UsuarioRegistro):
             "direccion_taller": data.direccion_taller,
             "latitud": data.latitud,
             "longitud": data.longitud,
+            "horario_apertura": data.horario_apertura,
+            "horario_cierre": data.horario_cierre,
         }
+
+        if data.rol == "taller":
+            apertura = data.horario_apertura or "08:00"
+            cierre = data.horario_cierre or "18:00"
+            _validar_rango_horario(apertura, cierre)
+            datos["horario_apertura"] = apertura
+            datos["horario_cierre"] = cierre
+
         codigo = generar_codigo()
         cur.execute(
             """
@@ -364,10 +396,20 @@ def verificar_codigo(data: VerificarCodigoRequest):
         if datos.get("rol") == "taller" and datos.get("nombre_taller") and datos.get("direccion_taller"):
             cur.execute(
                 """
-                INSERT INTO talleres (nombre, direccion, admin_id, latitud, longitud)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO talleres (
+                    nombre, direccion, admin_id, latitud, longitud, horario_apertura, horario_cierre
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                (datos["nombre_taller"], datos["direccion_taller"], nuevo["id"], datos.get("latitud"), datos.get("longitud")),
+                (
+                    datos["nombre_taller"],
+                    datos["direccion_taller"],
+                    nuevo["id"],
+                    datos.get("latitud"),
+                    datos.get("longitud"),
+                    datos.get("horario_apertura", "08:00"),
+                    datos.get("horario_cierre", "18:00"),
+                ),
             )
 
         cur.execute("UPDATE codigos_verificacion SET usado = TRUE WHERE id = %s", (row["id"],))
@@ -380,6 +422,65 @@ def verificar_codigo(data: VerificarCodigoRequest):
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error al verificar: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.get("/taller/{usuario_id}/horario", summary="Consultar horario de trabajo del taller")
+def obtener_horario_taller(usuario_id: int):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            SELECT id, nombre, horario_apertura, horario_cierre
+            FROM talleres
+            WHERE admin_id = %s
+            """,
+            (usuario_id,),
+        )
+        taller = cur.fetchone()
+        if not taller:
+            raise HTTPException(status_code=404, detail="Taller no encontrado.")
+        return dict(taller)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar horario: {str(e)}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@router.put("/taller/{usuario_id}/horario", summary="Actualizar horario de trabajo del taller")
+def actualizar_horario_taller(usuario_id: int, data: TallerHorario):
+    _validar_rango_horario(data.horario_apertura, data.horario_cierre)
+
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        cur.execute(
+            """
+            UPDATE talleres
+               SET horario_apertura = %s,
+                   horario_cierre = %s
+             WHERE admin_id = %s
+             RETURNING id, nombre, horario_apertura, horario_cierre
+            """,
+            (data.horario_apertura, data.horario_cierre, usuario_id),
+        )
+        taller = cur.fetchone()
+        if not taller:
+            raise HTTPException(status_code=404, detail="Taller no encontrado.")
+        conn.commit()
+        return {"mensaje": "Horario actualizado correctamente.", "taller": dict(taller)}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar horario: {str(e)}")
     finally:
         cur.close()
         conn.close()

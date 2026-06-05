@@ -192,7 +192,10 @@ CREATE TABLE public.talleres (
     admin_id integer,
     creado_en timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     latitud numeric(10,7),
-    longitud numeric(10,7)
+    longitud numeric(10,7),
+    horario_apertura time without time zone DEFAULT '08:00:00'::time without time zone NOT NULL,
+    horario_cierre time without time zone DEFAULT '18:00:00'::time without time zone NOT NULL,
+    CONSTRAINT talleres_horario_check CHECK ((horario_apertura < horario_cierre))
 );
 
 
