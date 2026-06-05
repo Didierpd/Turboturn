@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Historial - TurboTurn</title>
+  <title>Mapa de talleres - TurboTurn</title>
   <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: menú principal del usuario -->
     <div class="navbar">
       <h2>TurboTurn</h2>
       <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
@@ -16,35 +18,34 @@
         <a href="./pantalladeInicio.html?v=10">Inicio</a>
         <a href="./citas.html">Reservar cita</a>
         <a href="./vehiculos.html">Mis vehículos</a>
-        <a href="./mapa-talleres.html">Mapa</a>
-        <a class="active" href="./historial.html">Historial</a>
+        <a class="active" href="./mapa-talleres.html">Mapa</a>
+        <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
 
     <div class="container">
+      <!-- Bloque encabezado: estado de carga y resumen del mapa -->
       <div class="card">
-        <h1>Historial de servicios</h1>
-        <p style="color:#64748b;margin-bottom:20px;">Registro de todos los servicios realizados a tus vehículos.</p>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Vehículo</th>
-                <th>Servicio</th>
-                <th>Observaciones</th>
-                <th>Costo</th>
-              </tr>
-            </thead>
-            <tbody id="historialBody">
-              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
-            </tbody>
-          </table>
+        <h1>Mapa de talleres</h1>
+        <p id="mapaEstado" style="color:#64748b;">Cargando talleres activos...</p>
+      </div>
+
+      <!-- Bloque mapa: mapa Leaflet y lista lateral de talleres activos -->
+      <div class="map-layout">
+        <div class="map-panel">
+          <div id="mapaTalleres"></div>
+        </div>
+        <div class="card map-list-card">
+          <h2>Talleres activos</h2>
+          <div id="listaTalleresMapa" class="map-list">
+            <p style="color:#64748b;">Cargando...</p>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Bloque footer: datos de contacto comunes -->
     <footer class="app-footer">
       <div class="footer-grid">
         <div class="footer-brand">
@@ -79,7 +80,10 @@
     </footer>
   </div>
 
+  <!-- Bloque scripts: Leaflet, lógica compartida y carga del mapa -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/app.js?v=11"></script>
+  <script src="../js/mapa-talleres.js?v=10"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
@@ -88,30 +92,6 @@
       localStorage.removeItem("usuario");
       window.location.href = "./login.html";
     });
-
-    async function cargarHistorial() {
-      const tbody = document.getElementById("historialBody");
-      try {
-        const res = await fetch(`/api/historial/${usuario.id}`);
-        const historial = await res.json();
-        if (historial.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;">No hay servicios registrados aún.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = historial.map(h => `
-          <tr>
-            <td>${new Date(h.fecha).toLocaleDateString("es-CO")}</td>
-            <td>${h.tipo_vehiculo} ${h.marca} (${h.placa})</td>
-            <td>${h.servicio}</td>
-            <td>${h.observaciones || "-"}</td>
-            <td>$${Number(h.costo_final).toLocaleString("es-CO")}</td>
-          </tr>
-        `).join("");
-      } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5">Error al cargar historial.</td></tr>`;
-      }
-    }
-    cargarHistorial();
   </script>
 </body>
 </html>

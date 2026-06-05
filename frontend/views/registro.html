@@ -4,12 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Registro - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
+  <style>
+    #mapaRegistro { height: 280px; border-radius: 10px; margin-top: 10px; z-index: 0; }
+    .btn-buscar-mapa { background:#1d4ed8; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:0.9rem; margin-top:8px; }
+    .btn-buscar-mapa:hover { background:#1e40af; }
+    #coordenadasInfo { font-size:0.82rem; color:#64748b; margin-top:6px; }
+  </style>
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: retorno a inicio o login -->
     <div class="navbar">
       <h2>TurboTurn</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
         <a href="../index.html">Inicio</a>
         <a href="./login.html">Iniciar sesión</a>
@@ -17,6 +27,7 @@
     </div>
 
     <div class="container">
+      <!-- Bloque registro: formulario para usuario o taller mecánico -->
       <div class="card" style="max-width:550px; margin:40px auto;">
         <h1>Crear cuenta</h1>
         <p style="margin-bottom:20px; color:#64748b;">Regístrate como usuario o taller mecánico.</p>
@@ -34,22 +45,26 @@
           <!-- Campos comunes -->
           <div class="form-group">
             <label for="nombre">Nombre del responsable</label>
-            <input type="text" id="nombre" placeholder="Tu nombre completo" required />
+            <input type="text" id="nombre" placeholder="Tu nombre completo" required minlength="3" />
+            <span class="error-msg">Mínimo 3 caracteres.</span>
           </div>
 
           <div class="form-group">
             <label for="email">Correo electrónico</label>
             <input type="email" id="email" placeholder="ejemplo@correo.com" required />
+            <span class="error-msg">Ingresa un correo válido con @.</span>
           </div>
 
           <div class="form-group">
             <label for="telefono">Teléfono</label>
-            <input type="text" id="telefono" placeholder="3001234567" />
+            <input type="text" id="telefono" placeholder="3001234567" required pattern="[0-9]{7,15}" />
+            <span class="error-msg">Ingresa un número válido (solo dígitos).</span>
           </div>
 
           <div class="form-group">
             <label for="contrasena">Contraseña</label>
-            <input type="password" id="contrasena" placeholder="********" required />
+            <input type="password" id="contrasena" placeholder="Mínimo 8 caracteres" required minlength="8" />
+            <span class="error-msg">La contraseña debe tener al menos 8 caracteres.</span>
           </div>
 
           <!-- Campos solo para taller -->
@@ -59,12 +74,22 @@
 
             <div class="form-group">
               <label for="nombre_taller">Nombre del taller</label>
-              <input type="text" id="nombre_taller" placeholder="Ej: Taller Mecánico Central" />
+              <input type="text" id="nombre_taller" placeholder="Ej: Taller Mecánico Central" minlength="3" />
             </div>
 
             <div class="form-group">
               <label for="direccion_taller">Dirección</label>
-              <input type="text" id="direccion_taller" placeholder="Ej: Calle 80 #45-12, Bogotá" />
+              <input type="text" id="direccion_taller" placeholder="Ej: Calle 80 #45-12, Bogotá" minlength="5" />
+              <button type="button" class="btn-buscar-mapa" onclick="buscarDireccionEnMapa()">Buscar en mapa</button>
+            </div>
+
+            <div class="form-group">
+              <label>Ubica tu taller en el mapa</label>
+              <p style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Busca tu dirección o haz click en el mapa para marcar la ubicación exacta.</p>
+              <div id="mapaRegistro"></div>
+              <p id="coordenadasInfo">Sin ubicación seleccionada.</p>
+              <input type="hidden" id="latitud_taller" />
+              <input type="hidden" id="longitud_taller" />
             </div>
 
             <div style="padding:12px; background:#fef3c7; border-left:4px solid #f59e0b; border-radius:8px; color:#92400e; font-size:0.9rem; margin-bottom:16px;">
@@ -83,9 +108,95 @@
       </div>
     </div>
 
-    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+    <!-- Bloque footer: datos de contacto comunes -->
+    <footer class="app-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <img src="../images/logo_turbo.png" alt="TurboTurn" class="footer-logo" />
+            <div>
+              <strong>TurboTurn</strong>
+              <span>Gestión de turnos para talleres mecánicos</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>Línea de atención</h3>
+          <p><strong>3202936515</strong></p>
+          <p>Lunes a sábado · 8:00 a.m. - 6:00 p.m.</p>
+        </div>
+        <div>
+          <h3>Canales digitales</h3>
+          <p>turboturn365@gmail.com</p>
+          <p>WhatsApp: 3202936515</p>
+        </div>
+        <div>
+          <h3>Colaboradores</h3>
+          <p>Didier Perilla · 3115945009</p>
+          <p>perillabarajas.didier@gmail.com</p>
+          <p>Nicolas Moreno · 3106623025</p>
+          <p>nicolasmoreno@gmail.com</p>
+          <p>Paula Pinilla · 3204848264</p>
+          <p>paulapinilla@gmail.com</p>
+        </div>
+      </div>
+    </footer>
   </div>
 
-  <script src="../js/app.js?v=3"></script>
+  <!-- Bloque scripts: registro, mapa de ubicación del taller y geocodificación -->
+  <script src="../js/app.js?v=11"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    let mapaReg = null;
+    let marcadorReg = null;
+
+    function iniciarMapaRegistro() {
+      if (mapaReg) return;
+      mapaReg = L.map("mapaRegistro").setView([4.6500, -74.0900], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19, attribution: "&copy; OpenStreetMap"
+      }).addTo(mapaReg);
+
+      mapaReg.on("click", function(e) {
+        colocarMarcador(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    function colocarMarcador(lat, lng) {
+      if (marcadorReg) mapaReg.removeLayer(marcadorReg);
+      marcadorReg = L.marker([lat, lng], { draggable: true }).addTo(mapaReg);
+      marcadorReg.on("dragend", function(e) {
+        const pos = e.target.getLatLng();
+        actualizarCoordenadas(pos.lat, pos.lng);
+      });
+      actualizarCoordenadas(lat, lng);
+    }
+
+    function actualizarCoordenadas(lat, lng) {
+      document.getElementById("latitud_taller").value = lat;
+      document.getElementById("longitud_taller").value = lng;
+      document.getElementById("coordenadasInfo").textContent = `Ubicación: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+
+    async function buscarDireccionEnMapa() {
+      const dir = document.getElementById("direccion_taller").value.trim();
+      if (!dir) { alert("Escribe una dirección primero."); return; }
+      iniciarMapaRegistro();
+      const query = encodeURIComponent(dir + ", Bogotá, Colombia");
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`);
+      const data = await res.json();
+      if (data.length === 0) { alert("No se encontró la dirección. Haz click en el mapa para ubicar manualmente."); return; }
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+      mapaReg.setView([lat, lng], 17);
+      colocarMarcador(lat, lng);
+    }
+
+    document.getElementById("rol").addEventListener("change", function() {
+      if (this.value === "taller") {
+        setTimeout(iniciarMapaRegistro, 100);
+      }
+    });
+  </script>
 </body>
 </html>

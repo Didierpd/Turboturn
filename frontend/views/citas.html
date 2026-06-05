@@ -4,23 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Citas - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: menú principal del usuario -->
     <div class="navbar">
       <h2>TurboTurn</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
-        <a href="./pantalladeInicio.html">Inicio</a>
-        <a class="active" href="./citas.html">Citas</a>
-        <a href="./vehiculos.html">Vehículos</a>
-        <a href="./servicios.html">Servicios</a>
+        <a href="./pantalladeInicio.html?v=10">Inicio</a>
+        <a class="active" href="./citas.html">Reservar cita</a>
+        <a href="./vehiculos.html">Mis vehículos</a>
+        <a href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
 
     <div class="container">
+      <!-- Bloque reserva: formulario para crear una cita y cargar servicios por taller -->
       <div class="card">
         <h1>Reservar cita</h1>
 
@@ -32,6 +36,13 @@
             </select>
           </div>
 
+          <div class="form-group" id="servicioGroup" style="display:none;">
+            <label for="servicio">Servicio del taller</label>
+            <select id="servicio">
+              <option value="">Selecciona primero un taller</option>
+            </select>
+          </div>
+
           <div class="form-group">
             <label for="vehiculo">Vehículo</label>
             <select id="vehiculo" required>
@@ -40,8 +51,36 @@
           </div>
 
           <div class="form-group">
-            <label for="fecha">Fecha y hora</label>
-            <input type="datetime-local" id="fecha" required />
+            <label>Fecha y hora</label>
+            <!-- Bloque fecha/hora: selectores propios para evitar calendarios distintos por navegador -->
+            <div class="datetime-picker" aria-label="Fecha y hora de la cita">
+              <div class="datetime-row datetime-row-date">
+                <select id="fechaDia" aria-label="Día">
+                  <option value="">Día</option>
+                </select>
+                <select id="fechaMes" aria-label="Mes">
+                  <option value="">Mes</option>
+                </select>
+                <select id="fechaAnio" aria-label="Año">
+                  <option value="">Año</option>
+                </select>
+              </div>
+              <div class="datetime-row datetime-row-time">
+                <select id="fechaHora" aria-label="Hora">
+                  <option value="">Hora</option>
+                </select>
+                <select id="fechaMinuto" aria-label="Minutos">
+                  <option value="">Min</option>
+                </select>
+                <select id="fechaPeriodo" aria-label="Periodo">
+                  <option value="">a.m./p.m.</option>
+                  <option value="AM">a.m.</option>
+                  <option value="PM">p.m.</option>
+                </select>
+              </div>
+            </div>
+            <input type="hidden" id="fecha" />
+            <p id="fechaHelp" class="field-help">Selecciona fecha y hora para reservar.</p>
           </div>
 
           <div class="form-group">
@@ -55,6 +94,7 @@
         <div id="citaAlert" class="alert"></div>
       </div>
 
+      <!-- Bloque historial rápido: citas existentes del usuario -->
       <div class="card">
         <h2>Mis citas</h2>
         <div class="table-wrapper">
@@ -63,22 +103,56 @@
               <tr>
                 <th>Fecha / Hora</th>
                 <th>Vehículo</th>
+                <th>Taller</th>
                 <th>Estado</th>
                 <th>Notas</th>
               </tr>
             </thead>
             <tbody id="citasBody">
-              <tr><td colspan="4" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+    <!-- Bloque footer: datos de contacto comunes -->
+    <footer class="app-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <img src="../images/logo_turbo.png" alt="TurboTurn" class="footer-logo" />
+            <div>
+              <strong>TurboTurn</strong>
+              <span>Gestión de turnos para talleres mecánicos</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>Línea de atención</h3>
+          <p><strong>3202936515</strong></p>
+          <p>Lunes a sábado · 8:00 a.m. - 6:00 p.m.</p>
+        </div>
+        <div>
+          <h3>Canales digitales</h3>
+          <p>turboturn365@gmail.com</p>
+          <p>WhatsApp: 3202936515</p>
+        </div>
+        <div>
+          <h3>Colaboradores</h3>
+          <p>Didier Perilla · 3115945009</p>
+          <p>perillabarajas.didier@gmail.com</p>
+          <p>Nicolas Moreno · 3106623025</p>
+          <p>nicolasmoreno@gmail.com</p>
+          <p>Paula Pinilla · 3204848264</p>
+          <p>paulapinilla@gmail.com</p>
+        </div>
+      </div>
+    </footer>
   </div>
 
-  <script src="../js/app.js"></script>
+  <!-- Bloque scripts: lógica de citas, sesión y salida -->
+  <script src="../js/app.js?v=11"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }

@@ -4,16 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Taller - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: pestañas operativas del taller -->
     <div class="navbar">
       <h2>TurboTurn — Taller</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
         <a href="#" class="tab-btn active" data-tab="agenda">Agenda</a>
         <a href="#" class="tab-btn" data-tab="citas">Todas las citas</a>
         <a href="#" class="tab-btn" data-tab="clientes">Clientes</a>
+        <a href="#" class="tab-btn" data-tab="mecanicos">Mecánicos</a>
+        <a href="#" class="tab-btn" data-tab="servicios">Servicios</a>
+        <a href="#" class="tab-btn" data-tab="seguridad">Seguridad</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
@@ -23,21 +29,43 @@
       <!-- Resumen siempre visible -->
       <div class="card">
         <h1 id="bienvenida">Panel del Taller</h1>
-        <p style="color:#64748b;">Gestiona tu agenda, citas y clientes.</p>
+        <p style="color:#64748b;">Gestiona tu agenda, citas, clientes y mecánicos.</p>
       </div>
 
-      <div class="grid" style="margin-bottom:20px;">
-        <div class="info-box">
-          <h3>Citas de hoy</h3>
-          <p id="citasHoy" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
+      <!-- Bloque estadísticas de agenda: contadores y gráficas visibles solo en Agenda -->
+      <div id="agendaStatsPanel">
+        <div class="grid" style="margin-bottom:20px;">
+          <div class="info-box">
+            <h3>Citas de hoy</h3>
+            <p id="citasHoy" style="font-size:2rem;font-weight:bold;color:#1d4ed8;">-</p>
+          </div>
+          <div class="info-box">
+            <h3>Pendientes</h3>
+            <p id="citasPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
+          </div>
+          <div class="info-box">
+            <h3>Completadas</h3>
+            <p id="citasCompletadas" style="font-size:2rem;font-weight:bold;color:#16a34a;">-</p>
+          </div>
         </div>
-        <div class="info-box">
-          <h3>Pendientes</h3>
-          <p id="citasPendientes" style="font-size:2rem;font-weight:bold;color:#f59e0b;">-</p>
-        </div>
-        <div class="info-box">
-          <h3>Completadas</h3>
-          <p id="citasCompletadas" style="font-size:2rem;font-weight:bold;color:#16a34a;">-</p>
+
+        <div class="stats-grid">
+          <div class="chart-card">
+            <h3>Citas por estado</h3>
+            <div id="tallerCitasEstadoChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Servicios más solicitados</h3>
+            <div id="tallerServiciosChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Clientes registrados por mes</h3>
+            <div id="tallerClientesMesChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
+          <div class="chart-card">
+            <h3>Mecánicos con más citas</h3>
+            <div id="tallerMecanicosChart" class="bar-chart"><p>Cargando...</p></div>
+          </div>
         </div>
       </div>
 
@@ -53,12 +81,13 @@
                   <th>Cliente</th>
                   <th>Vehículo</th>
                   <th>Notas</th>
+                  <th>Mecánico</th>
                   <th>Estado</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody id="agendaHoyBody">
-                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#64748b;">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -77,12 +106,13 @@
                   <th>Cliente</th>
                   <th>Vehículo</th>
                   <th>Notas</th>
+                  <th>Mecánico</th>
                   <th>Estado</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody id="todasCitasBody">
-                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#64748b;">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -112,13 +142,198 @@
         </div>
       </div>
 
+      <!-- Tab Mecánicos -->
+      <div id="tab-mecanicos" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Mecánicos del taller</h2>
+          <form id="mecanicoForm" style="margin-top:15px;">
+            <div class="grid">
+              <div class="form-group">
+                <label for="mecanicoNombre">Nombre</label>
+                <input type="text" id="mecanicoNombre" placeholder="Nombre del mecánico" minlength="3" required />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoEmail">Correo de acceso</label>
+                <input type="email" id="mecanicoEmail" placeholder="correo@ejemplo.com" required />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoPassword">Contraseña</label>
+                <input type="password" id="mecanicoPassword" placeholder="Mínimo 6 caracteres" minlength="6" required />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoTelefono">Teléfono</label>
+                <input type="tel" id="mecanicoTelefono" placeholder="Teléfono" />
+              </div>
+              <div class="form-group">
+                <label for="mecanicoEspecialidad">Especialidad</label>
+                <input type="text" id="mecanicoEspecialidad" placeholder="Frenos, motor, diagnóstico..." />
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">Registrar mecánico</button>
+          </form>
+          <div id="mecanicoAlert" class="alert" style="margin-top:12px;"></div>
+
+          <div class="table-wrapper" style="margin-top:20px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Correo</th>
+                  <th>Especialidad</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="mecanicosBody">
+                <tr><td colspan="6" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Servicios -->
+      <div id="tab-servicios" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Servicios del taller</h2>
+          <form id="servicioForm" style="margin-top:15px;">
+            <input type="hidden" id="servicioIdEditar" />
+            <div class="grid">
+              <div class="form-group">
+                <label for="servicioNombre">Nombre del servicio</label>
+                <input type="text" id="servicioNombre" placeholder="Ej: Cambio de aceite" minlength="2" required />
+              </div>
+              <div class="form-group">
+                <label for="servicioDescripcion">Descripción</label>
+                <input type="text" id="servicioDescripcion" placeholder="Descripción opcional" />
+              </div>
+              <div class="form-group">
+                <label for="servicioPrecio">Precio ($)</label>
+                <input type="number" id="servicioPrecio" placeholder="Ej: 50000" min="0" step="100" required />
+              </div>
+              <div class="form-group">
+                <label for="servicioTiempo">Tiempo estimado</label>
+                <input type="text" id="servicioTiempo" placeholder="Ej: 1 hora, 30 min" />
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="submit" id="servicioSubmitBtn" class="btn-submit">Agregar servicio</button>
+              <button type="button" id="servicioCancelarEdicionBtn" class="btn-submit" style="display:none;background:#64748b;">Cancelar edición</button>
+            </div>
+          </form>
+          <div id="servicioAlert" class="alert" style="margin-top:12px;"></div>
+          <div class="table-wrapper" style="margin-top:20px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Descripción</th>
+                  <th>Precio</th>
+                  <th>Tiempo estimado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="serviciosTallerBody">
+                <tr><td colspan="5" style="text-align:center;color:#64748b;">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seguridad MFA -->
+      <div id="tab-seguridad" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>🔐 Seguridad — Verificación en dos pasos (MFA)</h2>
+          <p style="color:#64748b; margin-bottom:20px;">
+            Protege tu cuenta activando Google Authenticator. Cada vez que inicies sesión
+            se te pedirá un código de 6 dígitos desde tu teléfono.
+          </p>
+
+          <div id="mfaEstado" style="margin-bottom:16px;">
+            <span id="mfaBadge" style="display:inline-block;padding:6px 14px;border-radius:999px;font-weight:bold;font-size:0.9rem;"></span>
+          </div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button id="btnActivarMFA" class="btn-submit" style="display:none; background:#16a34a;">Activar MFA</button>
+            <button id="btnDesactivarMFA" class="btn-submit" style="display:none; background:#dc2626;">Desactivar MFA</button>
+          </div>
+
+          <div id="mfaQRSection" style="display:none; margin-top:24px;">
+            <hr style="margin-bottom:20px; border-color:#e5e7eb;" />
+            <h3 style="margin-bottom:12px;">Paso 1 — Escanea el código QR</h3>
+            <p style="color:#64748b; margin-bottom:16px;">Abre <strong>Google Authenticator</strong>, toca <strong>+</strong> y escanea:</p>
+            <div style="text-align:center; margin-bottom:16px;">
+              <img id="mfaQRImg" src="" alt="QR MFA" style="width:200px;height:200px;border:4px solid #1d4ed8;border-radius:12px;" />
+            </div>
+            <p style="color:#64748b; font-size:0.85rem; margin-bottom:4px;">¿No puedes escanear? Ingresa este código manualmente:</p>
+            <div style="background:#f1f5f9;padding:10px 16px;border-radius:8px;font-family:monospace;font-size:1rem;letter-spacing:3px;text-align:center;margin-bottom:20px;" id="mfaSecretText">—</div>
+            <h3 style="margin-bottom:12px;">Paso 2 — Confirma con el código</h3>
+            <form id="mfaVerificarForm" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+                <input type="text" id="codigoActivacion" maxlength="6" placeholder="123456" style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+              </div>
+              <button type="submit" class="btn-submit" style="background:#1d4ed8;">Confirmar y activar</button>
+            </form>
+            <div id="mfaActivarAlert" class="alert" style="margin-top:12px;"></div>
+          </div>
+
+          <div id="mfaDesactivarSection" style="display:none; margin-top:24px;">
+            <hr style="margin-bottom:20px; border-color:#e5e7eb;" />
+            <h3 style="margin-bottom:12px;">Desactivar MFA</h3>
+            <form id="mfaDesactivarForm" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="form-group" style="margin:0; flex:1; min-width:180px;">
+                <input type="text" id="codigoDesactivar" maxlength="6" placeholder="123456" style="font-size:1.5rem;letter-spacing:8px;text-align:center;" required />
+              </div>
+              <button type="submit" class="btn-submit" style="background:#dc2626;">Confirmar y desactivar</button>
+            </form>
+            <div id="mfaDesactivarAlert" class="alert" style="margin-top:12px;"></div>
+          </div>
+          <div id="mfaAlert" class="alert" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+    <!-- Bloque footer: datos de contacto comunes -->
+    <footer class="app-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <img src="../images/logo_turbo.png" alt="TurboTurn" class="footer-logo" />
+            <div>
+              <strong>TurboTurn</strong>
+              <span>Gestión de turnos para talleres mecánicos</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>Línea de atención</h3>
+          <p><strong>3202936515</strong></p>
+          <p>Lunes a sábado · 8:00 a.m. - 6:00 p.m.</p>
+        </div>
+        <div>
+          <h3>Canales digitales</h3>
+          <p>turboturn365@gmail.com</p>
+          <p>WhatsApp: 3202936515</p>
+        </div>
+        <div>
+          <h3>Colaboradores</h3>
+          <p>Didier Perilla · 3115945009</p>
+          <p>perillabarajas.didier@gmail.com</p>
+          <p>Nicolas Moreno · 3106623025</p>
+          <p>nicolasmoreno@gmail.com</p>
+          <p>Paula Pinilla · 3204848264</p>
+          <p>paulapinilla@gmail.com</p>
+        </div>
+      </div>
+    </footer>
   </div>
 
-  <script src="../js/app.js?v=3"></script>
-  <script src="../js/taller.js?v=2"></script>
+  <!-- Bloque scripts: lógica compartida, panel del taller y cambio de pestañas -->
+  <script src="../js/app.js?v=11"></script>
+  <script src="../js/taller.js?v=18"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "taller") { window.location.href = "./login.html"; }
@@ -133,12 +348,16 @@
     function mostrarTab(tab) {
       document.querySelectorAll(".tab-section").forEach(s => s.style.display = "none");
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("agendaStatsPanel").style.display = tab === "agenda" ? "block" : "none";
       document.getElementById("tab-" + tab).style.display = "block";
       document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add("active");
 
       if (tab === "agenda") cargarAgendaHoy();
       if (tab === "citas") cargarTodasCitas();
       if (tab === "clientes") cargarClientes();
+      if (tab === "mecanicos") cargarMecanicos();
+      if (tab === "servicios") cargarServiciosTaller();
+      if (tab === "seguridad") cargarEstadoMFA();
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -148,7 +367,93 @@
       });
     });
 
+    // ── MFA: cargar estado ──
+    async function cargarEstadoMFA() {
+      try {
+        const res = await fetch(`/api/mfa/estado/${usuario.id}`);
+        const data = await res.json();
+        const badge = document.getElementById("mfaBadge");
+        const btnActivar = document.getElementById("btnActivarMFA");
+        const btnDesactivar = document.getElementById("btnDesactivarMFA");
+        if (data.mfa_habilitado) {
+          badge.textContent = "✅ MFA Activo";
+          badge.style.background = "#dcfce7";
+          badge.style.color = "#166534";
+          btnActivar.style.display = "none";
+          btnDesactivar.style.display = "inline-block";
+        } else {
+          badge.textContent = "⚠️ MFA Inactivo";
+          badge.style.background = "#fef3c7";
+          badge.style.color = "#92400e";
+          btnActivar.style.display = "inline-block";
+          btnDesactivar.style.display = "none";
+        }
+      } catch {}
+    }
+
+    // ── MFA: activar ──
+    document.getElementById("btnActivarMFA").addEventListener("click", async function() {
+      try {
+        const res = await fetch("/api/mfa/configurar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id }),
+        });
+        const data = await res.json();
+        document.getElementById("mfaQRImg").src = `data:image/png;base64,${data.qr_base64}`;
+        document.getElementById("mfaSecretText").textContent = data.secret;
+        document.getElementById("mfaQRSection").style.display = "block";
+        document.getElementById("mfaDesactivarSection").style.display = "none";
+      } catch { mostrarMensaje("mfaAlert", "Error al generar el QR.", "error"); }
+    });
+
+    // ── MFA: confirmar activación ──
+    document.getElementById("mfaVerificarForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigoActivacion").value.trim();
+      try {
+        const res = await fetch("/api/mfa/verificar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, codigo }),
+        });
+        const data = await res.json();
+        if (!res.ok) { mostrarMensaje("mfaActivarAlert", data.detail || "Código incorrecto.", "error"); return; }
+        mostrarMensaje("mfaActivarAlert", "✅ MFA activado correctamente.", "success");
+        document.getElementById("mfaQRSection").style.display = "none";
+        document.getElementById("codigoActivacion").value = "";
+        cargarEstadoMFA();
+      } catch { mostrarMensaje("mfaActivarAlert", "Error al activar MFA.", "error"); }
+    });
+
+    // ── MFA: desactivar ──
+    document.getElementById("btnDesactivarMFA").addEventListener("click", function() {
+      document.getElementById("mfaDesactivarSection").style.display = "block";
+      document.getElementById("mfaQRSection").style.display = "none";
+    });
+
+    document.getElementById("mfaDesactivarForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const codigo = document.getElementById("codigoDesactivar").value.trim();
+      try {
+        const res = await fetch("/api/mfa/deshabilitar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario_id: usuario.id, codigo }),
+        });
+        const data = await res.json();
+        if (!res.ok) { mostrarMensaje("mfaDesactivarAlert", data.detail || "Código incorrecto.", "error"); return; }
+        mostrarMensaje("mfaDesactivarAlert", "MFA desactivado correctamente.", "success");
+        document.getElementById("mfaDesactivarSection").style.display = "none";
+        document.getElementById("codigoDesactivar").value = "";
+        cargarEstadoMFA();
+      } catch { mostrarMensaje("mfaDesactivarAlert", "Error al desactivar MFA.", "error"); }
+    });
+
     cargarAgendaHoy();
+    cargarEstadisticasTaller();
+    activarFormularioMecanicos();
+    activarFormularioServicios();
   </script>
 </body>
 </html>

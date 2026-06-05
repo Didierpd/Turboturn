@@ -4,17 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Servicios - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
     <div class="navbar">
       <h2>TurboTurn</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
-        <a href="./pantalladeInicio.html">Inicio</a>
+        <a href="./pantalladeInicio.html?v=10">Inicio</a>
         <a href="./citas.html">Citas</a>
         <a href="./vehiculos.html">Vehículos</a>
         <a class="active" href="./servicios.html">Servicios</a>
+        <a href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
@@ -30,10 +33,41 @@
       </div>
     </div>
 
-    <div class="footer-note">TurboTurn - Plataforma de gestión de turnos para talleres</div>
+    <footer class="app-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <img src="../images/logo_turbo.png" alt="TurboTurn" class="footer-logo" />
+            <div>
+              <strong>TurboTurn</strong>
+              <span>Gestión de turnos para talleres mecánicos</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>Línea de atención</h3>
+          <p><strong>3202936515</strong></p>
+          <p>Lunes a sábado · 8:00 a.m. - 6:00 p.m.</p>
+        </div>
+        <div>
+          <h3>Canales digitales</h3>
+          <p>turboturn365@gmail.com</p>
+          <p>WhatsApp: 3202936515</p>
+        </div>
+        <div>
+          <h3>Colaboradores</h3>
+          <p>Didier Perilla · 3115945009</p>
+          <p>perillabarajas.didier@gmail.com</p>
+          <p>Nicolas Moreno · 3106623025</p>
+          <p>nicolasmoreno@gmail.com</p>
+          <p>Paula Pinilla · 3204848264</p>
+          <p>paulapinilla@gmail.com</p>
+        </div>
+      </div>
+    </footer>
   </div>
 
-  <script src="../js/app.js"></script>
+  <script src="../js/app.js?v=11"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario) { window.location.href = "./login.html"; }
@@ -46,7 +80,7 @@
     async function cargarServicios() {
       const grid = document.getElementById("serviciosGrid");
       try {
-        const res = await fetch("http://localhost:8000/api/servicios/");
+        const res = await fetch("/api/servicios/");
         const servicios = await res.json();
         if (servicios.length === 0) {
           grid.innerHTML = "<p style='color:#64748b;'>No hay servicios registrados.</p>";

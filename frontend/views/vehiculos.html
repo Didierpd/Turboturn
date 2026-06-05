@@ -4,26 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vehículos - TurboTurn</title>
-  <link rel="stylesheet" href="../styles/main.css" />
+  <link rel="icon" type="image/png" href="../images/favicon_turbo.png?v=1" />
+  <link rel="stylesheet" href="../styles/main.css?v=25" />
 </head>
 <body>
   <div class="page">
+    <!-- Bloque navegación: menú principal del usuario -->
     <div class="navbar">
       <h2>TurboTurn</h2>
+      <div class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')"><span></span><span></span><span></span></div>
       <div class="nav-links">
-        <a href="./pantalladeInicio.html">Inicio</a>
-        <a href="./citas.html">Citas</a>
-        <a class="active" href="./vehiculos.html">Vehículos</a>
-        <a href="./servicios.html">Servicios</a>
+        <a href="./pantalladeInicio.html?v=10">Inicio</a>
+        <a href="./citas.html">Reservar cita</a>
+        <a class="active" href="./vehiculos.html">Mis vehículos</a>
+        <a href="./mapa-talleres.html">Mapa</a>
         <a href="./historial.html">Historial</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
     </div>
-
     <div class="container">
+      <!-- Bloque formulario: registro de vehículos del usuario -->
       <div class="card">
         <h1>Registrar vehículo</h1>
-
         <form id="vehiculoForm">
           <div class="form-group">
             <label for="tipo_vehiculo">Tipo de vehículo</label>
@@ -33,33 +35,31 @@
               <option value="moto">Moto</option>
             </select>
           </div>
-
           <div class="form-group">
             <label for="marca">Marca</label>
-            <input type="text" id="marca" placeholder="Ej: Mazda" required />
+            <input type="text" id="marca" placeholder="Ej: Mazda" required minlength="2" />
+            <span class="error-msg">Ingresa una marca válida.</span>
           </div>
-
           <div class="form-group">
             <label for="anio">Año</label>
-            <input type="number" id="anio" placeholder="Ej: 2020" required />
+            <input type="number" id="anio" placeholder="Ej: 2020" required min="1970" max="2027" />
+            <span class="error-msg">Año no disponible. Ingresa un año entre 1970 y 2027.</span>
           </div>
-
           <div class="form-group">
             <label for="placa">Placa</label>
-            <input type="text" id="placa" placeholder="Ej: ABC123" required />
+            <input type="text" id="placa" placeholder="Ej: ABC123" required maxlength="7" style="text-transform:uppercase" />
+            <span class="error-msg">Formato: 3 letras y 3 números (carro) o ABC56H (moto).</span>
           </div>
-
           <div class="form-group">
             <label for="color">Color</label>
-            <input type="text" id="color" placeholder="Ej: Rojo" />
+            <input type="text" id="color" placeholder="Ej: Rojo" required minlength="2" />
+            <span class="error-msg">Ingresa un color válido.</span>
           </div>
-
           <button type="submit" class="btn-submit">Guardar vehículo</button>
         </form>
-
         <div id="vehiculoAlert" class="alert"></div>
       </div>
-
+      <!-- Bloque tabla: vehículos ya registrados -->
       <div class="card">
         <h2>Vehículos registrados</h2>
         <div class="table-wrapper">
@@ -71,25 +71,67 @@
                 <th>Año</th>
                 <th>Placa</th>
                 <th>Color</th>
+                <th>Acción</th>
               </tr>
             </thead>
-            <tbody id="vehiculosBody">
-            </tbody>
+            <tbody id="vehiculosBody"></tbody>
           </table>
         </div>
       </div>
     </div>
-
-    <script src="../js/app.js"></script>
-    <script>
-      const usuario = JSON.parse(localStorage.getItem("usuario"));
-      if (!usuario) { window.location.href = "./login.html"; }
-      document.getElementById("btnSalir").addEventListener("click", function(e) {
-        e.preventDefault();
-        localStorage.removeItem("usuario");
-        window.location.href = "./login.html";
-      });
-    </script>
+    <!-- Bloque footer: datos de contacto comunes -->
+    <footer class="app-footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <img src="../images/logo_turbo.png" alt="TurboTurn" class="footer-logo" />
+            <div>
+              <strong>TurboTurn</strong>
+              <span>Gestión de turnos para talleres mecánicos</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3>Línea de atención</h3>
+          <p><strong>3202936515</strong></p>
+          <p>Lunes a sábado · 8:00 a.m. - 6:00 p.m.</p>
+        </div>
+        <div>
+          <h3>Canales digitales</h3>
+          <p>turboturn365@gmail.com</p>
+          <p>WhatsApp: 3202936515</p>
+        </div>
+        <div>
+          <h3>Colaboradores</h3>
+          <p>Didier Perilla · 3115945009</p>
+          <p>perillabarajas.didier@gmail.com</p>
+          <p>Nicolas Moreno · 3106623025</p>
+          <p>nicolasmoreno@gmail.com</p>
+          <p>Paula Pinilla · 3204848264</p>
+          <p>paulapinilla@gmail.com</p>
+        </div>
+      </div>
+    </footer>
   </div>
+  <!-- Bloque scripts: lógica de vehículos, placa por tipo y salida -->
+  <script src="../js/app.js?v=11"></script>
+  <script>
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    document.getElementById("btnSalir").addEventListener("click", function(e) {
+      e.preventDefault();
+      localStorage.removeItem("usuario");
+      window.location.href = "./login.html";
+    });
+    document.getElementById("tipo_vehiculo").addEventListener("change", function() {
+      const placa = document.getElementById("placa");
+      if (this.value === "moto") {
+        placa.pattern = "[A-Za-z]{3}[0-9]{2}[A-Za-z]{1}";
+        placa.placeholder = "Ej: ABC56H";
+      } else if (this.value === "carro") {
+        placa.pattern = "[A-Za-z]{3}[0-9]{3}";
+        placa.placeholder = "Ej: ABC123";
+      }
+    });
+  </script>
 </body>
 </html>
