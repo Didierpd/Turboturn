@@ -19,6 +19,7 @@
         <a href="#" class="tab-btn" data-tab="clientes">Clientes</a>
         <a href="#" class="tab-btn" data-tab="mecanicos">Mecánicos</a>
         <a href="#" class="tab-btn" data-tab="servicios">Servicios</a>
+        <a href="#" class="tab-btn" data-tab="horario">Horario</a>
         <a href="#" class="tab-btn" data-tab="seguridad">Seguridad</a>
         <a href="#" id="btnSalir">Salir</a>
       </div>
@@ -242,6 +243,28 @@
         </div>
       </div>
 
+      <!-- Tab Horario -->
+      <div id="tab-horario" class="tab-section" style="display:none;">
+        <div class="card">
+          <h2>Horario de trabajo</h2>
+          <p style="color:#64748b; margin-bottom:16px;">Define el rango en el que tus clientes pueden reservar citas.</p>
+          <form id="horarioTallerForm" style="margin-top:15px;">
+            <div class="grid">
+              <div class="form-group">
+                <label for="tallerHorarioApertura">Hora de apertura</label>
+                <input type="time" id="tallerHorarioApertura" required />
+              </div>
+              <div class="form-group">
+                <label for="tallerHorarioCierre">Hora de cierre</label>
+                <input type="time" id="tallerHorarioCierre" required />
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">Guardar horario</button>
+          </form>
+          <div id="horarioTallerAlert" class="alert" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
       <!-- Seguridad MFA -->
       <div id="tab-seguridad" class="tab-section" style="display:none;">
         <div class="card">
@@ -357,6 +380,7 @@
       if (tab === "clientes") cargarClientes();
       if (tab === "mecanicos") cargarMecanicos();
       if (tab === "servicios") cargarServiciosTaller();
+      if (tab === "horario") cargarHorarioTaller();
       if (tab === "seguridad") cargarEstadoMFA();
     }
 
@@ -454,6 +478,7 @@
     cargarEstadisticasTaller();
     activarFormularioMecanicos();
     activarFormularioServicios();
+    activarFormularioHorarioTaller();
   </script>
 </body>
 </html>

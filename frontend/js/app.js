@@ -34,6 +34,8 @@ function activarFetchSinCache() {
 
 activarFetchSinCache();
 
+let talleresReservaCache = [];
+
 // ── Bloque de UI: muestra alertas temporales reutilizables ───────────────────
 function mostrarMensaje(id, mensaje, tipo = "success") {
   const alertBox = document.getElementById(id);
@@ -46,6 +48,54 @@ function mostrarMensaje(id, mensaje, tipo = "success") {
   setTimeout(() => {
     alertBox.style.display = "none";
   }, 3000);
+}
+
+function formatearHoraCorta(hora) {
+  return String(hora || "").slice(0, 5);
+}
+
+function minutosDesdeHora(hora) {
+  const [horas, minutos] = formatearHoraCorta(hora).split(":").map(Number);
+  if (Number.isNaN(horas) || Number.isNaN(minutos)) return null;
+  return horas * 60 + minutos;
+}
+
+function obtenerTallerReservaSeleccionado() {
+  const tallerId = Number(document.getElementById("taller")?.value);
+  return talleresReservaCache.find(taller => Number(taller.id) === tallerId) || null;
+}
+
+function validarFechaDentroHorarioTaller(fechaHora) {
+  const taller = obtenerTallerReservaSeleccionado();
+  if (!taller || !fechaHora) return { valido: true };
+
+  const apertura = minutosDesdeHora(taller.horario_apertura || "08:00");
+  const cierre = minutosDesdeHora(taller.horario_cierre || "18:00");
+  const fecha = new Date(fechaHora);
+  const minutosCita = fecha.getHours() * 60 + fecha.getMinutes();
+
+  if (apertura === null || cierre === null) return { valido: true };
+  if (minutosCita < apertura || minutosCita >= cierre) {
+    return {
+      valido: false,
+      mensaje: `Este taller atiende de ${formatearHoraCorta(taller.horario_apertura)} a ${formatearHoraCorta(taller.horario_cierre)}.`,
+    };
+  }
+
+  return { valido: true };
+}
+
+function actualizarAyudaHorarioTaller() {
+  const ayuda = document.getElementById("tallerHorarioHelp");
+  if (!ayuda) return;
+
+  const taller = obtenerTallerReservaSeleccionado();
+  if (!taller) {
+    ayuda.textContent = "Selecciona un taller para ver su horario.";
+    return;
+  }
+
+  ayuda.textContent = `Horario: ${formatearHoraCorta(taller.horario_apertura)} a ${formatearHoraCorta(taller.horario_cierre)}.`;
 }
 
 // ── Bloque login: inicia sesión y redirige según MFA/rol ─────────────────────
@@ -140,12 +190,18 @@ async function cargarTalleresEnSelect() {
   try {
     const res = await fetch("/api/citas/talleres-activos");
     const talleres = await res.json();
+    talleresReservaCache = talleres;
     if (talleres.length === 0) {
       select.innerHTML = `<option value="">No hay talleres disponibles</option>`;
       return;
     }
     select.innerHTML = `<option value="">Selecciona un taller</option>` +
-      talleres.map(t => `<option value="${t.id}">${t.nombre} — ${t.direccion}</option>`).join("");
+      talleres.map(t => `
+        <option value="${t.id}">
+          ${t.nombre} — ${t.direccion} (${formatearHoraCorta(t.horario_apertura)} a ${formatearHoraCorta(t.horario_cierre)})
+        </option>
+      `).join("");
+    actualizarAyudaHorarioTaller();
   } catch (err) {
     select.innerHTML = `<option value="">Error al cargar talleres</option>`;
   }
@@ -327,8 +383,11 @@ function activarFormularioCitas() {
       grupo.style.display = "none";
       select.disabled = false;
       select.innerHTML = '<option value="">Selecciona primero un taller</option>';
+      actualizarAyudaHorarioTaller();
       return;
     }
+
+    actualizarAyudaHorarioTaller();
 
     grupo.style.display = "block";
     select.disabled = true;
@@ -400,6 +459,12 @@ function activarFormularioCitas() {
       return;
     }
 
+    const validacionHorario = validarFechaDentroHorarioTaller(datos.fecha_hora);
+    if (!validacionHorario.valido) {
+      mostrarMensaje("citaAlert", validacionHorario.mensaje, "error");
+      return;
+    }
+
     try {
       const res = await fetch("/api/citas/", {
         method: "POST",
@@ -408,7 +473,8 @@ function activarFormularioCitas() {
       });
 
       if (!res.ok) {
-        mostrarMensaje("citaAlert", "Error al reservar la cita.", "error");
+        const err = await res.json();
+        mostrarMensaje("citaAlert", err.detail || "Error al reservar la cita.", "error");
         return;
       }
 
@@ -610,6 +676,16 @@ function activarFormularioRegistro() {
       }
       datos.latitud = parseFloat(lat);
       datos.longitud = parseFloat(lng);
+      datos.horario_apertura = document.getElementById("horario_apertura").value;
+      datos.horario_cierre = document.getElementById("horario_cierre").value;
+      if (!datos.horario_apertura || !datos.horario_cierre) {
+        mostrarMensaje("registroAlert", "Ingresa el horario de atención del taller.", "error");
+        return;
+      }
+      if (minutosDesdeHora(datos.horario_apertura) >= minutosDesdeHora(datos.horario_cierre)) {
+        mostrarMensaje("registroAlert", "La hora de apertura debe ser menor que la hora de cierre.", "error");
+        return;
+      }
     }
 
     try {
