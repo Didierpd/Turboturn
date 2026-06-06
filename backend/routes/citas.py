@@ -536,12 +536,23 @@ def create_cita(data: CitaData):
             raise HTTPException(status_code=400, detail="Este taller ya tiene 10 citas reservadas para ese dia.")
 
         cur.execute(
+            "SELECT COUNT(*) AS total FROM mecanicos WHERE taller_id = %s AND activo = TRUE",
+            (data.taller_id,),
+        )
+        mecanicos_activos = cur.fetchone()["total"]
+
+        cur.execute(
             """SELECT COUNT(*) as total FROM citas
-               WHERE taller_id = %s AND fecha_hora = %s""",
+               WHERE taller_id = %s AND fecha_hora = %s
+               AND estado IN ('pendiente', 'confirmada')""",
             (data.taller_id, data.fecha_hora),
         )
-        if cur.fetchone()["total"] > 0:
-            raise HTTPException(status_code=400, detail="Ya hay una cita en ese taller para esa fecha y hora.")
+        citas_en_horario = cur.fetchone()["total"]
+
+        if mecanicos_activos == 0 and citas_en_horario > 0:
+            raise HTTPException(status_code=400, detail="Ya hay una cita en ese horario y el taller no tiene mecánicos disponibles.")
+        if mecanicos_activos > 0 and citas_en_horario >= mecanicos_activos:
+            raise HTTPException(status_code=400, detail=f"El taller no tiene mecánicos disponibles para ese horario. Capacidad: {mecanicos_activos}.")
 
         cur.execute(
             """INSERT INTO citas (usuario_id, vehiculo_id, taller_id, fecha_hora, notas, servicio_id)
