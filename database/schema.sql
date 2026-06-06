@@ -241,8 +241,13 @@ CREATE TABLE public.usuarios (
     mfa_secret text,
     mfa_habilitado boolean DEFAULT false NOT NULL,
     mfa_verificado boolean DEFAULT false NOT NULL,
+    genero character varying(20),
     CONSTRAINT usuarios_estado_check CHECK (((estado)::text = ANY ((ARRAY['activo'::character varying, 'pendiente'::character varying, 'rechazado'::character varying])::text[]))),
-    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['usuario'::character varying, 'taller'::character varying, 'admin'::character varying])::text[])))
+    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['usuario'::character varying, 'taller'::character varying, 'admin'::character varying])::text[]))),
+      CONSTRAINT usuarios_genero_check CHECK (((genero IS NULL) OR
+      ((genero)::text = ANY ((ARRAY['masculino'::character varying,
+      'femenino'::character varying, 'otro'::character varying,
+      'prefiero_no_decir'::character varying])::text[]))))
 );
 
 

@@ -286,7 +286,7 @@ async function cargarServiciosTaller() {
         <td>${s.nombre}</td>
         <td>${s.descripcion || "-"}</td>
         <td>$${Number(s.precio).toLocaleString("es-CO")}</td>
-        <td>${s.tiempo_estimado || "-"}</td>
+        <td>${s.tiempo_estimado ? s.tiempo_estimado + " min" : "-"}</td>
         <td>
           <button onclick="editarServicio(${s.id})" class="btn-submit" style="background:#1d4ed8;padding:6px 10px;border-radius:8px;font-size:0.8rem;margin-right:6px;">
             Editar
@@ -447,7 +447,7 @@ async function cambiarEstadoCita(id, estado, mecanicoId = null) {
 
     if (!res.ok) {
       const err = await res.json();
-      alert(err.detail || "Error al actualizar la cita.");
+      mostrarMensaje("citaAlert", err.detail || "Error al actualizar la cita.", "error");
       return;
     }
 
@@ -595,7 +595,7 @@ function activarFormularioServicios() {
       nombre: document.getElementById("servicioNombre").value.trim(),
       descripcion: document.getElementById("servicioDescripcion").value.trim() || null,
       precio: parseFloat(document.getElementById("servicioPrecio").value),
-      tiempo_estimado: document.getElementById("servicioTiempo").value.trim() || null,
+      tiempo_estimado: parseInt(document.getElementById("servicioTiempo").value) || null,
       usuario_id: usuario.id,
     };
 

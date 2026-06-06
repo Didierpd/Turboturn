@@ -136,7 +136,7 @@ class ServicioData(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
     precio: float
-    tiempo_estimado: Optional[str] = None
+    tiempo_estimado: Optional[int] = None
     usuario_id: int
 
 
