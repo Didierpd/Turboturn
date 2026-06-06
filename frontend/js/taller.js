@@ -286,7 +286,7 @@ async function cargarServiciosTaller() {
         <td>${s.nombre}</td>
         <td>${s.descripcion || "-"}</td>
         <td>$${Number(s.precio).toLocaleString("es-CO")}</td>
-        <td>${s.tiempo_estimado || "-"}</td>
+        <td>${s.tiempo_estimado ? s.tiempo_estimado + " min" : "-"}</td>
         <td>
           <button onclick="editarServicio(${s.id})" class="btn-submit" style="background:#1d4ed8;padding:6px 10px;border-radius:8px;font-size:0.8rem;margin-right:6px;">
             Editar
