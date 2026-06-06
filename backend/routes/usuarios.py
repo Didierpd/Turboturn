@@ -35,7 +35,7 @@ class UsuarioRegistro(BaseModel):
     password: str
     telefono: Optional[str] = None
     rol: Optional[str] = "usuario"
-   genero: Optional[str] = None
+    genero: Optional[str] = None
     nombre_taller: Optional[str] = None
     direccion_taller: Optional[str] = None
     latitud: Optional[float] = None
@@ -380,10 +380,9 @@ def verificar_codigo(data: VerificarCodigoRequest):
 
         cur.execute(
             """
-  INSERT INTO usuarios (nombre, email, contrasena, telefono, rol, estado,
-  genero)
-  VALUES (%s, %s, %s, %s, %s, %s, %s)
-  RETURNING id, nombre, email, telefono, rol, genero
+            INSERT INTO usuarios (nombre, email, contrasena, telefono, rol, estado, genero)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, nombre, email, telefono, rol, genero
             """,
             (
                 datos["nombre"],
