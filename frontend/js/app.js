@@ -659,6 +659,8 @@ function activarFormularioRegistro() {
       telefono: document.getElementById("telefono").value,
       password: document.getElementById("contrasena").value,
       rol,
+       genero: document.getElementById("genero").value || null,
+
     };
 
     if (rol === "taller") {

@@ -35,6 +35,7 @@ class UsuarioRegistro(BaseModel):
     password: str
     telefono: Optional[str] = None
     rol: Optional[str] = "usuario"
+    genero: Optional[str] = None
     nombre_taller: Optional[str] = None
     direccion_taller: Optional[str] = None
     latitud: Optional[float] = None
@@ -91,6 +92,7 @@ def registro(data: UsuarioRegistro):
             "contrasena": hashed,
             "telefono": data.telefono,
             "rol": data.rol,
+            "genero": data.genero,
             "nombre_taller": data.nombre_taller,
             "direccion_taller": data.direccion_taller,
             "latitud": data.latitud,
@@ -378,9 +380,9 @@ def verificar_codigo(data: VerificarCodigoRequest):
 
         cur.execute(
             """
-            INSERT INTO usuarios (nombre, email, contrasena, telefono, rol, estado)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id, nombre, email, telefono, rol
+            INSERT INTO usuarios (nombre, email, contrasena, telefono, rol, estado, genero)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, nombre, email, telefono, rol, genero
             """,
             (
                 datos["nombre"],
@@ -389,6 +391,7 @@ def verificar_codigo(data: VerificarCodigoRequest):
                 datos.get("telefono"),
                 datos.get("rol", "usuario"),
                 estado_inicial,
+                datos.get("genero"),
             ),
         )
         nuevo = dict(cur.fetchone())
