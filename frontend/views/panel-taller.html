@@ -70,11 +70,13 @@
         </div>
       </div>
 
+      <!-- Alerta global para acciones de citas -->
+      <div id="citaAlert" class="alert" style="margin-bottom:12px;"></div>
+
       <!-- Tab Agenda (solo citas de hoy) -->
       <div id="tab-agenda" class="tab-section">
         <div class="card">
           <h2>Agenda de hoy</h2>
-          <div id="citaAlert" class="alert" style="margin-bottom:12px;"></div>
           <div class="table-wrapper" style="margin-top:15px;">
             <table>
               <thead>
@@ -357,7 +359,7 @@
 
   <!-- Bloque scripts: lógica compartida, panel del taller y cambio de pestañas -->
   <script src="../js/app.js?v=11"></script>
-  <script src="../js/taller.js?v=18"></script>
+  <script src="../js/taller.js?v=19"></script>
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario || usuario.rol !== "taller") { window.location.href = "./login.html"; }
