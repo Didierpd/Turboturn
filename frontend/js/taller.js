@@ -595,7 +595,7 @@ function activarFormularioServicios() {
       nombre: document.getElementById("servicioNombre").value.trim(),
       descripcion: document.getElementById("servicioDescripcion").value.trim() || null,
       precio: parseFloat(document.getElementById("servicioPrecio").value),
-      tiempo_estimado: document.getElementById("servicioTiempo").value.trim() || null,
+      tiempo_estimado: parseInt(document.getElementById("servicioTiempo").value) || null,
       usuario_id: usuario.id,
     };
 
