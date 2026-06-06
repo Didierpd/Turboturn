@@ -14,6 +14,7 @@ Gestión completa de citas entre clientes y talleres.
 """
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+from datetime import timedelta
 from pydantic import BaseModel
 from typing import Optional
 import psycopg2.extras
@@ -351,7 +352,44 @@ def cambiar_estado_cita(
             )
             if not cur.fetchone():
                 raise HTTPException(status_code=400, detail="El mecánico no pertenece al taller de esta cita o está inactivo.")
+            # Verificar que el mecánico no tenga otra cita que se traslape en horario
+            cur.execute("SELECT fecha_hora, servicio_id FROM citas WHERE id = %s", (cita_id,))
+            cita_nueva = cur.fetchone()
 
+            cur.execute(
+                """
+                SELECT c.id, c.fecha_hora, s.tiempo_estimado
+                FROM citas c
+                LEFT JOIN servicios s ON c.servicio_id = s.id
+                WHERE c.mecanico_id = %s
+                  AND c.estado = 'confirmada'
+                  AND c.id != %s
+                """,
+                (mecanico_id, cita_id),
+            )
+            citas_mecanico = cur.fetchall()
+
+            duracion_nueva = 60
+            if cita_nueva["servicio_id"]:
+                cur.execute("SELECT tiempo_estimado FROM servicios WHERE id = %s", (cita_nueva["servicio_id"],))
+                srv = cur.fetchone()
+                if srv and srv["tiempo_estimado"]:
+                    duracion_nueva = srv["tiempo_estimado"]
+
+            hora_nueva = cita_nueva["fecha_hora"]
+            fin_nueva = hora_nueva + timedelta(minutes=duracion_nueva)
+
+            for c in citas_mecanico:
+                duracion_c = c["tiempo_estimado"] or 60
+                hora_c = c["fecha_hora"]
+                fin_c = hora_c + timedelta(minutes=duracion_c)
+                if hora_nueva < fin_c and fin_nueva > hora_c:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"El mecánico ya tiene una cita a las {hora_c.strftime('%I:%M %p')} que se traslapa con este horario.",
+                    )
+
+              
             cur.execute(
                 """
                 SELECT c.id, c.fecha_hora,
