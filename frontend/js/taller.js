@@ -447,7 +447,7 @@ async function cambiarEstadoCita(id, estado, mecanicoId = null) {
 
     if (!res.ok) {
       const err = await res.json();
-      alert(err.detail || "Error al actualizar la cita.");
+      mostrarMensaje("citaAlert", err.detail || "Error al actualizar la cita.", "error");
       return;
     }
 
